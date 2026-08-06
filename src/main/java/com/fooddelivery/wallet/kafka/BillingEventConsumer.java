@@ -13,7 +13,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fooddelivery.common.constants.KafkaConstants;
 
 import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
@@ -45,6 +48,12 @@ private final WalletService walletService;
             String category = (String) event.get("chargeCategory");
 
             walletService.debit(advertiserId, EntityType.ADVERTISER, amount, eventId, category != null ? category : "Ad Billing");
+    }
+
+    @DltHandler
+    public void handleDltBillingEvent(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("DLQ: Failed to process billing event on topic {} after retries: {}", topic, message);
+        // Persist DLQ message for manual intervention or alert monitoring systems
     }
 
     public BillingEventConsumer(WalletService walletService, ObjectMapper objectMapper) {

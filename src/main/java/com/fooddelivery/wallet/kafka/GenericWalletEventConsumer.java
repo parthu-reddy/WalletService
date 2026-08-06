@@ -4,6 +4,9 @@ import com.fooddelivery.wallet.enums.EntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.annotation.DltHandler;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
@@ -53,5 +56,10 @@ private final WalletService walletService;
             log.error("Failed to process generic wallet event: {}", message, e);
             throw new RuntimeException("Failed to process generic wallet event", e);
         }
+    }
+    
+    @DltHandler
+    public void handleDltWalletEvent(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("DLQ: Failed to process generic wallet event on topic {} after retries: {}", topic, message);
     }
 }
