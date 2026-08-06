@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +26,7 @@ public class LedgerFailureConsumer {
         this.objectMapper = objectMapper;
     }
 
+    @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 1000, multiplier = 2.0))
     @KafkaListener(topics = "ledger-events-dlq", groupId = "${spring.kafka.consumer.group-id}")
     public void consumeLedgerFailure(String message) {
         try {
@@ -47,6 +50,7 @@ public class LedgerFailureConsumer {
             }
         } catch (Exception e) {
             log.error("Failed to process ledger failure event: {}", message, e);
+            throw new RuntimeException("Failed to process ledger failure event", e);
         }
     }
 }

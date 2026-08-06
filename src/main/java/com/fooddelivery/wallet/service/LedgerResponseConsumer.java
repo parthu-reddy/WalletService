@@ -8,7 +8,10 @@ import com.fooddelivery.wallet.repository.WalletTransactionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Service;
+import com.fooddelivery.common.constants.KafkaConstants;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -27,7 +30,8 @@ public class LedgerResponseConsumer {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = "LEDGER_TRANSACTION_REPLY", groupId = "${spring.kafka.consumer.group-id}")
+    @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 1000, multiplier = 2.0))
+    @KafkaListener(topics = KafkaConstants.TOPIC_LEDGER_REPLIES, groupId = "${spring.kafka.consumer.group-id}")
     public void consumeLedgerReply(String message) {
         try {
             JsonNode node = objectMapper.readTree(message);
@@ -58,6 +62,7 @@ public class LedgerResponseConsumer {
             
         } catch (Exception e) {
             log.error("Failed to process ledger reply: {}", message, e);
+            throw new RuntimeException("Failed to process ledger reply", e);
         }
     }
 }

@@ -6,12 +6,15 @@ import org.slf4j.LoggerFactory;
 import com.fooddelivery.wallet.enums.EntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fooddelivery.common.constants.KafkaConstants;
 
 @Component
 public class GenericWalletEventConsumer {
@@ -25,7 +28,8 @@ public class GenericWalletEventConsumer {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = "wallet-events", groupId = "${spring.kafka.consumer.group-id}")
+    @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 1000, multiplier = 2.0))
+    @KafkaListener(topics = KafkaConstants.TOPIC_WALLET_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
     public void consumeWalletEvent(String message) {
         try {
             log.info("Received wallet event: {}", message);
@@ -50,6 +54,7 @@ public class GenericWalletEventConsumer {
             }
         } catch (Exception e) {
             log.error("Failed to process generic wallet event: {}", message, e);
+            throw new RuntimeException("Failed to process generic wallet event", e);
         }
     }
 }

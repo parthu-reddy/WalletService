@@ -13,7 +13,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.springframework.stereotype.Component;
+import com.fooddelivery.common.constants.KafkaConstants;
 
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.retry.annotation.Backoff;
@@ -30,7 +30,7 @@ public class BillingEventConsumer {
         attempts = "4",
         backoff = @Backoff(delay = 1000, multiplier = 2.0)
     )
-    @KafkaListener(topics = "ad-billing-events", groupId = "${spring.kafka.consumer.group-id}")
+    @KafkaListener(topics = KafkaConstants.TOPIC_AD_BILLING_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
     public void consumeAdBillingEvent(String message) throws Exception {
         log.info("Received ad billing event: {}", message);
         Map<String, Object> event = objectMapper.readValue(message, new TypeReference<Map<String, Object>>() {});

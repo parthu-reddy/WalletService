@@ -22,9 +22,11 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fooddelivery.wallet.entity.OutboxEvent;
+import com.fooddelivery.common.outbox.entity.OutboxEventEntity;
+import com.fooddelivery.common.constants.AggregateType;
+import com.fooddelivery.common.constants.EventType;
 import com.fooddelivery.common.enums.OutboxStatus;
-import com.fooddelivery.wallet.repository.OutboxEventRepository;
+import com.fooddelivery.common.outbox.repository.OutboxEventRepository;
 
 @Service
 public class WalletService {
@@ -196,9 +198,10 @@ public class WalletService {
             payload.put("toType", getAccountType(entityType));
         }
 
-        OutboxEvent event = new OutboxEvent();
+        OutboxEventEntity event = new OutboxEventEntity();
         event.setAggregateId(referenceId);
-        event.setEventType("LEDGER_TRANSACTION_REQUEST");
+        event.setAggregateType(AggregateType.LEDGER);
+        event.setEventType(EventType.LEDGER_TRANSACTION_REQUEST);
         event.setPayload(payload.toString());
         event.setStatus(OutboxStatus.UNPROCESSED);
         
