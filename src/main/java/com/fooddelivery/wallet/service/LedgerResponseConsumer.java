@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fooddelivery.wallet.entity.WalletTransaction;
 import com.fooddelivery.wallet.enums.EntityType;
 import com.fooddelivery.wallet.repository.WalletTransactionRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.retry.annotation.Backoff;
@@ -15,12 +13,12 @@ import com.fooddelivery.common.constants.KafkaConstants;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class LedgerResponseConsumer {
-
-    private static final Logger log = LoggerFactory.getLogger(LedgerResponseConsumer.class);
-    private final WalletService walletService;
+private final WalletService walletService;
     private final WalletTransactionRepository transactionRepository;
     private final ObjectMapper objectMapper;
 

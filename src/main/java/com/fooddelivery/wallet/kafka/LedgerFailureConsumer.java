@@ -1,7 +1,5 @@
 package com.fooddelivery.wallet.kafka;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
@@ -13,12 +11,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.math.BigDecimal;
 import com.fasterxml.jackson.core.type.TypeReference;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
+@Slf4j
 public class LedgerFailureConsumer {
-    private static final Logger log = LoggerFactory.getLogger(LedgerFailureConsumer.class);
-
-    private final WalletService walletService;
+private final WalletService walletService;
     private final ObjectMapper objectMapper;
 
     public LedgerFailureConsumer(WalletService walletService, ObjectMapper objectMapper) {

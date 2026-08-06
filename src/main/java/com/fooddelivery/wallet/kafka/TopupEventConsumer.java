@@ -1,8 +1,5 @@
 package com.fooddelivery.wallet.kafka;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fooddelivery.wallet.enums.EntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -15,12 +12,12 @@ import java.util.UUID;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fooddelivery.common.constants.KafkaConstants;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
+@Slf4j
 public class TopupEventConsumer {
-    private static final Logger log = LoggerFactory.getLogger(TopupEventConsumer.class);
-
-    private final WalletService walletService;
+private final WalletService walletService;
 
     private final ObjectMapper objectMapper;
 

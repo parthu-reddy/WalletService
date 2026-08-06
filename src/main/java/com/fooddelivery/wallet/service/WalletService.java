@@ -1,8 +1,5 @@
 package com.fooddelivery.wallet.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fooddelivery.wallet.entity.ProcessedEvent;
 import com.fooddelivery.wallet.entity.Wallet;
 import com.fooddelivery.wallet.entity.WalletTransaction;
@@ -27,12 +24,12 @@ import com.fooddelivery.common.constants.AggregateType;
 import com.fooddelivery.common.constants.EventType;
 import com.fooddelivery.common.enums.OutboxStatus;
 import com.fooddelivery.common.outbox.repository.OutboxEventRepository;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class WalletService {
-    private static final Logger log = LoggerFactory.getLogger(WalletService.class);
-
-    private final WalletRepository walletRepository;
+private final WalletRepository walletRepository;
     private final WalletTransactionRepository transactionRepository;
     private final ProcessedEventRepository processedEventRepository;
     private final OutboxEventRepository outboxEventRepository;
