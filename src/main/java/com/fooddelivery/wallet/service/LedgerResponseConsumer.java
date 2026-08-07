@@ -10,15 +10,14 @@ import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Service;
 import com.fooddelivery.common.constants.KafkaConstants;
-
 import java.math.BigDecimal;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
-@Slf4j
 public class LedgerResponseConsumer {
-private final WalletService walletService;
+    @java.lang.SuppressWarnings("all")
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LedgerResponseConsumer.class);
+    private final WalletService walletService;
     private final WalletTransactionRepository transactionRepository;
     private final ObjectMapper objectMapper;
 
@@ -35,30 +34,22 @@ private final WalletService walletService;
             JsonNode node = objectMapper.readTree(message);
             String status = node.path("status").asText();
             String referenceId = node.path("transferId").asText(); // Original outbox transfer ID
-            
             if ("FAILED".equalsIgnoreCase(status)) {
                 String reason = node.path("reason").asText();
                 log.warn("Ledger rejected transaction {}. Reversing debit...", referenceId);
-                
                 Optional<WalletTransaction> originalTxOpt = transactionRepository.findByReferenceId(referenceId);
                 if (originalTxOpt.isPresent()) {
                     WalletTransaction originalTx = originalTxOpt.get();
                     // In a real system, we might want to store the EntityId and EntityType in the WalletTransaction 
                     // or look up the Wallet to get them. Let's look up the Wallet to get them.
-                    
-                    walletService.reverseDebit(
-                            originalTx.getWalletId(), 
-                            originalTx.getAmount(), 
-                            referenceId, 
-                            reason
-                    );
+                    walletService.reverseDebit(originalTx.getWalletId(), originalTx.getAmount(), referenceId, reason);
                 }
             } else if ("SUCCESS".equalsIgnoreCase(status)) {
                 log.info("Ledger confirmed transaction {}", referenceId);
-                // Proceed with BillPaymentService trigger or mark status as CONFIRMED if we had a status field
             }
-            
-        } catch (Exception e) {
+        } catch (
+        // Proceed with BillPaymentService trigger or mark status as CONFIRMED if we had a status field
+        Exception e) {
             log.error("Failed to process ledger reply: {}", message, e);
             throw new RuntimeException("Failed to process ledger reply", e);
         }

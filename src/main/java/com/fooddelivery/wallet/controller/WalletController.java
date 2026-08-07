@@ -8,15 +8,17 @@ import com.fooddelivery.wallet.enums.EntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/v1/wallets")
-@Slf4j
 public class WalletController {
-
+    @java.lang.SuppressWarnings("all")
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WalletController.class);
     private final WalletService walletService;
 
     @PostMapping
@@ -26,23 +28,33 @@ public class WalletController {
     }
 
     @GetMapping("/{entityType}/{entityId}")
-    public ResponseEntity<WalletDto> getWallet(@PathVariable EntityType entityType, @PathVariable UUID entityId) {
+    public ResponseEntity<WalletDto> getWallet(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        if (userId != null && !userId.equals(entityId.toString())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         Wallet wallet = walletService.getWallet(entityId, entityType);
         return ResponseEntity.ok(mapToDto(wallet));
     }
 
+    @GetMapping("/{entityType}/{entityId}/transactions")
+    public ResponseEntity<Page<com.fooddelivery.wallet.entity.WalletTransaction>> getTransactions(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = "X-User-Id", required = false) String userId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        // Security check: Only allow users to view their own wallet transactions
+        if (userId != null && !userId.equals(entityId.toString())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        Pageable pageable = PageRequest.of(page, size);
+        Page<com.fooddelivery.wallet.entity.WalletTransaction> transactions = walletService.getTransactions(entityId, entityType, pageable);
+        return ResponseEntity.ok(transactions);
+    }
+
     @PostMapping("/{entityType}/{entityId}/debit")
-    public ResponseEntity<WalletDto> debit(@PathVariable EntityType entityType, 
-                                           @PathVariable UUID entityId, 
-                                           @RequestBody TransactionRequest request) {
+    public ResponseEntity<WalletDto> debit(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestBody TransactionRequest request) {
         Wallet wallet = walletService.debit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription());
         return ResponseEntity.ok(mapToDto(wallet));
     }
 
     @PostMapping("/{entityType}/{entityId}/credit")
-    public ResponseEntity<WalletDto> credit(@PathVariable EntityType entityType, 
-                                            @PathVariable UUID entityId, 
-                                            @RequestBody TransactionRequest request) {
+    public ResponseEntity<WalletDto> credit(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestBody TransactionRequest request) {
         Wallet wallet = walletService.credit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription());
         return ResponseEntity.ok(mapToDto(wallet));
     }
@@ -61,5 +73,4 @@ public class WalletController {
     public WalletController(WalletService walletService) {
         this.walletService = walletService;
     }
-
 }

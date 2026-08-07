@@ -34,6 +34,9 @@ public class WalletTransaction {
     
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+    
+    @Column(name = "metadata", columnDefinition = "TEXT")
+    private String metadata;
 
     public UUID getId() {
         return this.id;
@@ -91,4 +94,11 @@ public class WalletTransaction {
         this.createdAt = createdAt;
     }
 
+    public String getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(String metadata) {
+        this.metadata = metadata;
+    }
 }

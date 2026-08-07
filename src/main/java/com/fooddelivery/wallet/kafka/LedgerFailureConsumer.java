@@ -5,18 +5,17 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import java.util.UUID;
 import java.math.BigDecimal;
 import com.fasterxml.jackson.core.type.TypeReference;
-import lombok.extern.slf4j.Slf4j;
 
 @Component
-@Slf4j
 public class LedgerFailureConsumer {
-private final WalletService walletService;
+    @java.lang.SuppressWarnings("all")
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LedgerFailureConsumer.class);
+    private final WalletService walletService;
     private final ObjectMapper objectMapper;
 
     public LedgerFailureConsumer(WalletService walletService, ObjectMapper objectMapper) {
@@ -29,8 +28,8 @@ private final WalletService walletService;
     public void consumeLedgerFailure(String message) {
         try {
             log.info("Received ledger failure event for saga compensation: {}", message);
-            Map<String, Object> event = objectMapper.readValue(message, new TypeReference<Map<String, Object>>() {});
-            
+            Map<String, Object> event = objectMapper.readValue(message, new TypeReference<Map<String, Object>>() {
+            });
             // Check if this was a deduction from ADVERTISER_WALLET
             String fromType = (String) event.get("fromType");
             if ("ADVERTISER_WALLET".equals(fromType)) {
@@ -38,7 +37,6 @@ private final WalletService walletService;
                 String transferId = (String) event.get("transferId"); // Used as ref for rollback
                 String amtStr = String.valueOf(event.get("amount"));
                 BigDecimal amount = new BigDecimal(amtStr);
-                
                 if (fromIdStr != null && transferId != null) {
                     UUID advertiserId = UUID.fromString(fromIdStr);
                     // Perform compensating transaction (credit back the amount)
