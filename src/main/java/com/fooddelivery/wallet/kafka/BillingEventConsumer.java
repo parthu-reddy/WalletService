@@ -39,7 +39,17 @@ public class BillingEventConsumer {
         String amtStr = String.valueOf(event.get("amount"));
         BigDecimal amount = new BigDecimal(amtStr);
         String category = (String) event.get("chargeCategory");
-        walletService.debit(advertiserId, EntityType.ADVERTISER, amount, eventId, category != null ? category : "Ad Billing");
+        
+        com.fooddelivery.common.enums.ChargeCategory chargeCategoryEnum = com.fooddelivery.common.enums.ChargeCategory.AD_IMPRESSION;
+        if (category != null) {
+            try {
+                chargeCategoryEnum = com.fooddelivery.common.enums.ChargeCategory.valueOf(category);
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid charge category {}", category);
+            }
+        }
+        
+        walletService.debit(advertiserId, EntityType.ADVERTISER, amount, eventId, category != null ? category : "Ad Billing", chargeCategoryEnum);
     }
 
     @DltHandler

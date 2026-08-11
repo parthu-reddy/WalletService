@@ -40,7 +40,7 @@ public class LedgerFailureConsumer {
                 if (fromIdStr != null && transferId != null) {
                     UUID advertiserId = UUID.fromString(fromIdStr);
                     // Perform compensating transaction (credit back the amount)
-                    walletService.credit(advertiserId, com.fooddelivery.wallet.enums.EntityType.ADVERTISER, amount, transferId + "-rollback", "Saga Rollback: Ledger Failure");
+                    walletService.credit(advertiserId, com.fooddelivery.wallet.enums.EntityType.ADVERTISER, amount, transferId + "-rollback", "Saga Rollback: Ledger Failure", com.fooddelivery.common.enums.ChargeCategory.REFUND);
                     log.info("Successfully executed compensating transaction for advertiser {} for amount {}", advertiserId, amount);
                 }
             }

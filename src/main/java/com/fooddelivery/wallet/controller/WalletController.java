@@ -29,7 +29,7 @@ public class WalletController {
 
     @GetMapping("/{entityType}/{entityId}")
     public ResponseEntity<WalletDto> getWallet(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (userId != null && !userId.equals(entityId.toString())) {
+        if (entityType == EntityType.CUSTOMER && userId != null && !userId.equals(entityId.toString())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         Wallet wallet = walletService.getWallet(entityId, entityType);
@@ -39,7 +39,7 @@ public class WalletController {
     @GetMapping("/{entityType}/{entityId}/transactions")
     public ResponseEntity<Page<com.fooddelivery.wallet.entity.WalletTransaction>> getTransactions(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = "X-User-Id", required = false) String userId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         // Security check: Only allow users to view their own wallet transactions
-        if (userId != null && !userId.equals(entityId.toString())) {
+        if (entityType == EntityType.CUSTOMER && userId != null && !userId.equals(entityId.toString())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         Pageable pageable = PageRequest.of(page, size);
@@ -49,13 +49,14 @@ public class WalletController {
 
     @PostMapping("/{entityType}/{entityId}/debit")
     public ResponseEntity<WalletDto> debit(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestBody TransactionRequest request) {
-        Wallet wallet = walletService.debit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription());
+        Wallet wallet = walletService.debit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription(), com.fooddelivery.common.enums.ChargeCategory.ORDER_TOTAL);
         return ResponseEntity.ok(mapToDto(wallet));
     }
 
     @PostMapping("/{entityType}/{entityId}/credit")
     public ResponseEntity<WalletDto> credit(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestBody TransactionRequest request) {
-        Wallet wallet = walletService.credit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription());
+        // We could parse from request, but Topup is the main external use case.
+        Wallet wallet = walletService.credit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription(), com.fooddelivery.common.enums.ChargeCategory.AD_WALLET_TOPUP);
         return ResponseEntity.ok(mapToDto(wallet));
     }
 

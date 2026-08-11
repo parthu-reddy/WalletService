@@ -38,7 +38,7 @@ public class TopupEventConsumer {
                             BigDecimal amount = new BigDecimal(payload.get("amount").asText());
                             // Use orderId as idempotency key
                             String txId = orderId;
-                            walletService.credit(UUID.fromString(entityIdStr), EntityType.ADVERTISER, amount, txId, "Wallet Top-up");
+                            walletService.credit(UUID.fromString(entityIdStr), EntityType.ADVERTISER, amount, txId, "Wallet Top-up", com.fooddelivery.common.enums.ChargeCategory.AD_WALLET_TOPUP);
                         } else {
                             log.error("Invalid WALLET orderId format: {}", orderId);
                         }
@@ -56,5 +56,10 @@ public class TopupEventConsumer {
     public TopupEventConsumer(WalletService walletService, ObjectMapper objectMapper) {
         this.walletService = walletService;
         this.objectMapper = objectMapper;
+    }
+
+    @org.springframework.kafka.annotation.DltHandler
+    public void handleDltMessage(String message, @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
+        log.error("Dead Letter Topic: Failed to process wallet topup event after retries. Message: {}", message);
     }
 }

@@ -50,9 +50,9 @@ public class WalletService {
         return walletRepository.save(wallet);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Wallet getWallet(UUID entityId, EntityType entityType) {
-        return walletRepository.findByEntityIdAndEntityType(entityId, entityType).orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
+        return walletRepository.findByEntityIdAndEntityType(entityId, entityType).orElseGet(() -> createWallet(entityId, entityType, "USD"));
     }
 
     @Transactional(readOnly = true)
@@ -62,7 +62,7 @@ public class WalletService {
     }
 
     @Transactional
-    public Wallet debit(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String description) {
+    public Wallet debit(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String description, com.fooddelivery.common.enums.ChargeCategory chargeCategory) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Debit amount must be positive");
         }
@@ -82,12 +82,12 @@ public class WalletService {
         wallet.setBalance(wallet.getBalance().subtract(amount));
         walletRepository.save(wallet);
         recordTransaction(wallet, amount, TransactionType.DEBIT, referenceId, description, null);
-        publishLedgerEvent(entityId, entityType, amount, referenceId, description, true);
+        publishLedgerEvent(entityId, entityType, amount, referenceId, chargeCategory.name(), true);
         return wallet;
     }
 
     @Transactional
-    public Wallet credit(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String description, String metadata) {
+    public Wallet credit(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String description, String metadata, com.fooddelivery.common.enums.ChargeCategory chargeCategory) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Credit amount must be positive");
         }
@@ -104,13 +104,13 @@ public class WalletService {
         wallet.setBalance(wallet.getBalance().add(amount));
         walletRepository.save(wallet);
         recordTransaction(wallet, amount, TransactionType.CREDIT, referenceId, description, metadata);
-        publishLedgerEvent(entityId, entityType, amount, referenceId, description, false);
+        publishLedgerEvent(entityId, entityType, amount, referenceId, chargeCategory.name(), false);
         return wallet;
     }
 
     @Transactional
-    public Wallet credit(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String description) {
-        return credit(entityId, entityType, amount, referenceId, description, null);
+    public Wallet credit(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String description, com.fooddelivery.common.enums.ChargeCategory chargeCategory) {
+        return credit(entityId, entityType, amount, referenceId, description, null, chargeCategory);
     }
 
     @Transactional

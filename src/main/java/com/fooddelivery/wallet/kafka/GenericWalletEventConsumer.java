@@ -14,6 +14,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fooddelivery.common.constants.KafkaConstants;
+import io.micrometer.core.instrument.MeterRegistry;
 
 @Component
 public class GenericWalletEventConsumer {
@@ -21,10 +22,12 @@ public class GenericWalletEventConsumer {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GenericWalletEventConsumer.class);
     private final WalletService walletService;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
-    public GenericWalletEventConsumer(WalletService walletService, ObjectMapper objectMapper) {
+    public GenericWalletEventConsumer(WalletService walletService, ObjectMapper objectMapper, MeterRegistry meterRegistry) {
         this.walletService = walletService;
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
     }
 
     @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 1000, multiplier = 2.0))
@@ -44,8 +47,30 @@ public class GenericWalletEventConsumer {
                 String referenceId = payload.get("referenceId").asText();
                 String description = payload.has("description") ? payload.get("description").asText() : eventType;
                 String metadata = payload.has("metadata") ? payload.get("metadata").asText() : null;
-                walletService.credit(entityId, entityTypeEnum, amount, referenceId, description, metadata);
+                
+                com.fooddelivery.common.enums.ChargeCategory chargeCategory = com.fooddelivery.common.enums.ChargeCategory.ORDER_TOTAL;
+                if ("REFUND_GENERATED".equals(eventType)) chargeCategory = com.fooddelivery.common.enums.ChargeCategory.REFUND;
+                else if ("PAYOUT_GENERATED".equals(eventType)) chargeCategory = com.fooddelivery.common.enums.ChargeCategory.PAYOUT;
+                else if ("EARNINGS_GENERATED".equals(eventType)) {
+                    chargeCategory = entityTypeEnum == EntityType.RESTAURANT ? com.fooddelivery.common.enums.ChargeCategory.FOOD_COST : com.fooddelivery.common.enums.ChargeCategory.DELIVERY_FEE;
+                }
+                
+                walletService.credit(entityId, entityTypeEnum, amount, referenceId, description, metadata, chargeCategory);
+                
+                if ("REFUND_GENERATED".equals(eventType)) {
+                    meterRegistry.counter("refunds.wallet.success", "entityType", entityTypeEnum.name()).increment();
+                }
+                
                 log.info("Successfully processed {} for entity {}", eventType, entityId);
+            } else if ("REVERSAL_GENERATED".equals(eventType)) {
+                UUID entityId = UUID.fromString(payload.get("entityId").asText());
+                EntityType entityTypeEnum = EntityType.valueOf(payload.get("entityType").asText());
+                BigDecimal amount = new BigDecimal(payload.get("amount").asText());
+                String referenceId = payload.get("referenceId").asText();
+                String description = payload.has("description") ? payload.get("description").asText() : eventType;
+                walletService.debit(entityId, entityTypeEnum, amount, referenceId, description, com.fooddelivery.common.enums.ChargeCategory.REFUND);
+                meterRegistry.counter("reversals.wallet.success", "entityType", entityTypeEnum.name()).increment();
+                log.info("Successfully processed REVERSAL_GENERATED for entity {}", entityId);
             }
         } catch (Exception e) {
             log.error("Failed to process generic wallet event: {}", message, e);
@@ -56,5 +81,7 @@ public class GenericWalletEventConsumer {
     @DltHandler
     public void handleDltWalletEvent(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         log.error("DLQ: Failed to process generic wallet event on topic {} after retries: {}", topic, message);
+        meterRegistry.counter("wallet.event.dlq", "topic", topic).increment();
     }
 }
+
