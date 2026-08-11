@@ -49,9 +49,14 @@ public class LedgerResponseConsumer {
             }
         } catch (
         // Proceed with BillPaymentService trigger or mark status as CONFIRMED if we had a status field
-        Exception e) {
+        } catch (Exception e) {
             log.error("Failed to process ledger reply: {}", message, e);
             throw new RuntimeException("Failed to process ledger reply", e);
         }
+    }
+
+    @org.springframework.kafka.annotation.DltHandler
+    public void handleDlt(Object message, @org.springframework.messaging.handler.annotation.Header(org.springframework.kafka.support.KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("DLT processing: Message exhausted all retries in WalletService (LedgerResponseConsumer). Topic: {}, Message: {}", topic, message);
     }
 }

@@ -49,4 +49,9 @@ public class LedgerFailureConsumer {
             throw new RuntimeException("Failed to process ledger failure event", e);
         }
     }
+
+    @org.springframework.kafka.annotation.DltHandler
+    public void handleDlt(Object message, @org.springframework.messaging.handler.annotation.Header(org.springframework.kafka.support.KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("DLT processing: Message exhausted all retries in WalletService (LedgerFailureConsumer). Topic: {}, Message: {}", topic, message);
+    }
 }
