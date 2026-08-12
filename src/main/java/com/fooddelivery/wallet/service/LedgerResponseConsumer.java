@@ -47,7 +47,6 @@ public class LedgerResponseConsumer {
             } else if ("SUCCESS".equalsIgnoreCase(status)) {
                 log.info("Ledger confirmed transaction {}", referenceId);
             }
-        } catch (
         // Proceed with BillPaymentService trigger or mark status as CONFIRMED if we had a status field
         } catch (Exception e) {
             log.error("Failed to process ledger reply: {}", message, e);
