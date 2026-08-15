@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-@SpringBootApplication(scanBasePackages = {"com.fooddelivery.wallet", "com.fooddelivery.common"})
+@SpringBootApplication(scanBasePackages = {"com.fooddelivery.wallet", "com.fooddelivery.common", "com.fooddelivery"})
 @org.springframework.boot.autoconfigure.domain.EntityScan(basePackages = {"com.fooddelivery.wallet", "com.fooddelivery.common"})
 @org.springframework.data.jpa.repository.config.EnableJpaRepositories(basePackages = {"com.fooddelivery.wallet", "com.fooddelivery.common"})
 @EnableDiscoveryClient

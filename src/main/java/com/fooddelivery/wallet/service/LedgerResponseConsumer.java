@@ -14,9 +14,10 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 @Service
+@lombok.extern.slf4j.Slf4j
 public class LedgerResponseConsumer {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LedgerResponseConsumer.class);
+
     private final WalletService walletService;
     private final WalletTransactionRepository transactionRepository;
     private final ObjectMapper objectMapper;

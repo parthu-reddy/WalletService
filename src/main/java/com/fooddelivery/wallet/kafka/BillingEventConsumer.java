@@ -17,9 +17,10 @@ import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 
 @Component
+@lombok.extern.slf4j.Slf4j
 public class BillingEventConsumer {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BillingEventConsumer.class);
+
     private final WalletService walletService;
     private final ObjectMapper objectMapper;
 

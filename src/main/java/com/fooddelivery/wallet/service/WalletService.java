@@ -27,9 +27,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 @Service
+@lombok.extern.slf4j.Slf4j
 public class WalletService {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WalletService.class);
+
     private final WalletRepository walletRepository;
     private final WalletTransactionRepository transactionRepository;
     private final ProcessedEventRepository processedEventRepository;

@@ -16,9 +16,10 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/wallets")
+@lombok.extern.slf4j.Slf4j
 public class WalletController {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WalletController.class);
+
     private final WalletService walletService;
 
     @PostMapping

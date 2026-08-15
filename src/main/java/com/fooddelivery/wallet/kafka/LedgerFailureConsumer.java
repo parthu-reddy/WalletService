@@ -12,9 +12,10 @@ import java.math.BigDecimal;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 @Component
+@lombok.extern.slf4j.Slf4j
 public class LedgerFailureConsumer {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LedgerFailureConsumer.class);
+
     private final WalletService walletService;
     private final ObjectMapper objectMapper;
 

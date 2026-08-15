@@ -17,9 +17,10 @@ import com.fooddelivery.common.constants.KafkaConstants;
 import io.micrometer.core.instrument.MeterRegistry;
 
 @Component
+@lombok.extern.slf4j.Slf4j
 public class GenericWalletEventConsumer {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GenericWalletEventConsumer.class);
+
     private final WalletService walletService;
     private final ObjectMapper objectMapper;
     private final MeterRegistry meterRegistry;
