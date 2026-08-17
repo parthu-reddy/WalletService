@@ -6,7 +6,7 @@ import com.fooddelivery.wallet.entity.Wallet;
 import com.fooddelivery.wallet.enums.EntityType;
 import com.fooddelivery.wallet.enums.WalletStatus;
 import com.fooddelivery.wallet.exception.InsufficientFundsException;
-import com.fooddelivery.wallet.repository.ProcessedEventRepository;
+import com.fooddelivery.common.repository.IIdempotencyKeyRepository;
 import com.fooddelivery.wallet.repository.WalletRepository;
 import com.fooddelivery.wallet.repository.WalletTransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +33,7 @@ public class WalletServiceTest {
     private WalletTransactionRepository transactionRepository;
 
     @Mock
-    private ProcessedEventRepository processedEventRepository;
+    private IIdempotencyKeyRepository idempotencyKeyRepository;
 
     @Mock
     private OutboxEventRepository outboxEventRepository;
@@ -47,7 +47,7 @@ public class WalletServiceTest {
         walletService = new WalletService(
                 walletRepository,
                 transactionRepository,
-                processedEventRepository,
+                idempotencyKeyRepository,
                 outboxEventRepository,
                 objectMapper
         );
@@ -63,7 +63,7 @@ public class WalletServiceTest {
         wallet.setStatus(WalletStatus.ACTIVE);
         wallet.setBalance(new BigDecimal("100.00"));
 
-        when(processedEventRepository.existsById("REF_123")).thenReturn(false);
+        when(idempotencyKeyRepository.existsById("processed_event:wallet:REF_123")).thenReturn(false);
         when(walletRepository.findByEntityIdAndEntityTypeForUpdate(entityId, EntityType.RESTAURANT))
                 .thenReturn(Optional.of(wallet));
 
@@ -72,7 +72,7 @@ public class WalletServiceTest {
         assertEquals(new BigDecimal("60.00"), updatedWallet.getBalance());
         verify(walletRepository, times(1)).save(wallet);
         verify(transactionRepository, times(1)).save(any());
-        verify(processedEventRepository, times(1)).save(any());
+        verify(idempotencyKeyRepository, times(1)).save(any());
         verify(outboxEventRepository, times(1)).save(any());
     }
 
@@ -86,7 +86,7 @@ public class WalletServiceTest {
         wallet.setStatus(WalletStatus.ACTIVE);
         wallet.setBalance(new BigDecimal("10.00"));
 
-        when(processedEventRepository.existsById("REF_123")).thenReturn(false);
+        when(idempotencyKeyRepository.existsById("processed_event:wallet:REF_123")).thenReturn(false);
         when(walletRepository.findByEntityIdAndEntityTypeForUpdate(entityId, EntityType.RESTAURANT))
                 .thenReturn(Optional.of(wallet));
 
@@ -101,7 +101,7 @@ public class WalletServiceTest {
         Wallet wallet = new Wallet();
         wallet.setBalance(new BigDecimal("100.00"));
 
-        when(processedEventRepository.existsById("REF_123")).thenReturn(true);
+        when(idempotencyKeyRepository.existsById("processed_event:wallet:REF_123")).thenReturn(true);
         when(walletRepository.findByEntityIdAndEntityType(entityId, EntityType.RESTAURANT)).thenReturn(Optional.of(wallet));
 
         Wallet result = walletService.debit(entityId, EntityType.RESTAURANT, new BigDecimal("40.00"), "REF_123", "Test debit", com.fooddelivery.common.enums.ChargeCategory.ORDER_TOTAL);

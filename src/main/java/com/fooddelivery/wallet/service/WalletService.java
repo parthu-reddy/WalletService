@@ -1,6 +1,6 @@
 package com.fooddelivery.wallet.service;
 
-import com.fooddelivery.wallet.entity.ProcessedEvent;
+import com.fooddelivery.common.entity.IdempotencyKey;
 import com.fooddelivery.wallet.entity.Wallet;
 import com.fooddelivery.wallet.entity.WalletTransaction;
 import com.fooddelivery.wallet.enums.EntityType;
@@ -9,7 +9,7 @@ import com.fooddelivery.wallet.enums.WalletStatus;
 import com.fooddelivery.wallet.exception.InsufficientFundsException;
 import com.fooddelivery.wallet.exception.WalletInactiveException;
 import com.fooddelivery.wallet.exception.WalletNotFoundException;
-import com.fooddelivery.wallet.repository.ProcessedEventRepository;
+import com.fooddelivery.common.repository.IIdempotencyKeyRepository;
 import com.fooddelivery.wallet.repository.WalletRepository;
 import com.fooddelivery.wallet.repository.WalletTransactionRepository;
 import org.springframework.stereotype.Service;
@@ -33,7 +33,7 @@ public class WalletService {
 
     private final WalletRepository walletRepository;
     private final WalletTransactionRepository transactionRepository;
-    private final ProcessedEventRepository processedEventRepository;
+    private final IIdempotencyKeyRepository idempotencyKeyRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
 
@@ -68,7 +68,7 @@ public class WalletService {
             throw new IllegalArgumentException("Debit amount must be positive");
         }
         // Idempotency check
-        if (processedEventRepository.existsById(referenceId)) {
+        if (idempotencyKeyRepository.existsById("processed_event:wallet:" + referenceId)) {
             log.info("Transaction {} already processed for debit", referenceId);
             return walletRepository.findByEntityIdAndEntityType(entityId, entityType).orElseThrow();
         }
@@ -93,7 +93,7 @@ public class WalletService {
             throw new IllegalArgumentException("Credit amount must be positive");
         }
         // Idempotency check
-        if (processedEventRepository.existsById(referenceId)) {
+        if (idempotencyKeyRepository.existsById("processed_event:wallet:" + referenceId)) {
             log.info("Transaction {} already processed for credit", referenceId);
             return walletRepository.findByEntityIdAndEntityType(entityId, entityType).orElseThrow();
         }
@@ -121,7 +121,7 @@ public class WalletService {
         }
         String refundRefId = originalReferenceId + "_REFUND";
         // Idempotency check
-        if (processedEventRepository.existsById(refundRefId)) {
+        if (idempotencyKeyRepository.existsById("processed_event:wallet:" + refundRefId)) {
             log.info("Transaction {} already processed for refund", refundRefId);
             return walletRepository.findById(walletId).orElseThrow();
         }
@@ -146,15 +146,14 @@ public class WalletService {
         tx.setDescription(description);
         tx.setMetadata(metadata);
         transactionRepository.save(tx);
-        ProcessedEvent event = new ProcessedEvent();
-        event.setEventId(referenceId);
-        processedEventRepository.save(event);
+        IdempotencyKey event = new IdempotencyKey("processed_event:wallet:" + referenceId);
+        idempotencyKeyRepository.save(event);
     }
 
-    public WalletService(WalletRepository walletRepository, WalletTransactionRepository transactionRepository, ProcessedEventRepository processedEventRepository, OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper) {
+    public WalletService(WalletRepository walletRepository, WalletTransactionRepository transactionRepository, IIdempotencyKeyRepository idempotencyKeyRepository, OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper) {
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
-        this.processedEventRepository = processedEventRepository;
+        this.idempotencyKeyRepository = idempotencyKeyRepository;
         this.outboxEventRepository = outboxEventRepository;
         this.objectMapper = objectMapper;
     }
