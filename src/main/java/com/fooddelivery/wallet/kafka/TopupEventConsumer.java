@@ -22,14 +22,18 @@ public class TopupEventConsumer {
 
     @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 1000, multiplier = 2.0))
     @KafkaListener(topics = KafkaConstants.TOPIC_PAYMENT_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
-    public void consumePaymentEvent(String message) {
+    public void consumePaymentEvent(String message,
+            @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
         try {
             log.info("Received payment topup event: {}", message);
             JsonNode root = objectMapper.readTree(message);
-            if (!root.has("eventType")) return;
-            String eventType = root.get("eventType").asText();
+            String eventType = com.fooddelivery.common.util.EventPayloadUtils.resolveEventType(root, headers);
+            if (eventType == null) return;
             if ("AD_WALLET_TOPUP_COMPLETED".equals(eventType) || "WALLET_TOPUP_COMPLETED".equals(eventType)) {
-                JsonNode payload = root.get("payload");
+                // PaymentGatewayIntegration publishes a FLAT PaymentSucceededEvent plus an
+                // eventType field -- there is no {eventType, payload} envelope. Requiring one meant
+                // advertiser wallet top-ups were silently never credited.
+                JsonNode payload = com.fooddelivery.common.util.EventPayloadUtils.unwrapPayload(root);
                 if (payload != null && payload.has("orderId") && payload.has("amount")) {
                     String orderId = payload.get("orderId").asText();
                     if (orderId.startsWith("WALLET_")) {
