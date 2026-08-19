@@ -56,3 +56,5 @@ management:
       exposure:
         include: health,info,prometheus
 
+
+spring.main.allow-bean-definition-overriding: true
