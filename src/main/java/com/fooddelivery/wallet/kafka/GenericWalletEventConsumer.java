@@ -33,14 +33,20 @@ public class GenericWalletEventConsumer {
 
     @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 1000, multiplier = 2.0))
     @KafkaListener(topics = KafkaConstants.TOPIC_WALLET_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
-    public void consumeWalletEvent(String message) {
+    public void consumeWalletEvent(String message,
+            @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
         try {
             log.info("Received wallet event: {}", message);
             JsonNode root = objectMapper.readTree(message);
-            if (!root.has("eventType")) return;
-            String eventType = root.get("eventType").asText();
-            JsonNode payload = root.get("payload");
-            if (payload == null) return;
+
+            // Body-first event type and shape-tolerant payload. See EventPayloadUtils -- the
+            // body-first ordering is load-bearing on this topic, where the header and body
+            // deliberately disagree (REVERSAL_GENERATED body vs REFUND_GENERATED header).
+            String eventType = com.fooddelivery.common.util.EventPayloadUtils.resolveEventType(root, headers);
+            if (eventType == null) return;
+
+            JsonNode payload = com.fooddelivery.common.util.EventPayloadUtils.unwrapPayload(root);
+            if (payload == null || payload.isMissingNode()) return;
             if ("REFUND_GENERATED".equals(eventType) || "EARNINGS_GENERATED".equals(eventType) || "PAYOUT_GENERATED".equals(eventType)) {
                 UUID entityId = UUID.fromString(payload.get("entityId").asText());
                 EntityType entityTypeEnum = EntityType.valueOf(payload.get("entityType").asText());
