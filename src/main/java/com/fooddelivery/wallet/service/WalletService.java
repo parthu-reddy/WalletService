@@ -37,11 +37,11 @@ public class WalletService {
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
 
+    @org.springframework.beans.factory.annotation.Value("${platform.default-currency:INR}")
+    private String defaultCurrency;
+
     @Transactional
     public Wallet createWallet(UUID entityId, EntityType entityType, String currency) {
-        if (walletRepository.findByEntityIdAndEntityType(entityId, entityType).isPresent()) {
-            throw new IllegalArgumentException("Wallet already exists for this entity");
-        }
         Wallet wallet = new Wallet();
         wallet.setEntityId(entityId);
         wallet.setEntityType(entityType);
@@ -51,9 +51,10 @@ public class WalletService {
         return walletRepository.save(wallet);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Wallet getWallet(UUID entityId, EntityType entityType) {
-        return walletRepository.findByEntityIdAndEntityType(entityId, entityType).orElseGet(() -> createWallet(entityId, entityType, "USD"));
+        return walletRepository.findByEntityIdAndEntityType(entityId, entityType)
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
     }
 
     @Transactional(readOnly = true)
@@ -68,7 +69,7 @@ public class WalletService {
             throw new IllegalArgumentException("Debit amount must be positive");
         }
         // Idempotency check
-        if (idempotencyKeyRepository.existsById("processed_event:wallet:" + referenceId)) {
+        if (idempotencyKeyRepository.tryClaim("processed_event:wallet:" + referenceId) == 0) {
             log.info("Transaction {} already processed for debit", referenceId);
             return walletRepository.findByEntityIdAndEntityType(entityId, entityType).orElseThrow();
         }
@@ -93,7 +94,7 @@ public class WalletService {
             throw new IllegalArgumentException("Credit amount must be positive");
         }
         // Idempotency check
-        if (idempotencyKeyRepository.existsById("processed_event:wallet:" + referenceId)) {
+        if (idempotencyKeyRepository.tryClaim("processed_event:wallet:" + referenceId) == 0) {
             log.info("Transaction {} already processed for credit", referenceId);
             return walletRepository.findByEntityIdAndEntityType(entityId, entityType).orElseThrow();
         }
@@ -114,29 +115,6 @@ public class WalletService {
         return credit(entityId, entityType, amount, referenceId, description, null, chargeCategory);
     }
 
-    @Transactional
-    public Wallet reverseDebit(UUID walletId, BigDecimal amount, String originalReferenceId, String reason) {
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Reverse amount must be positive");
-        }
-        String refundRefId = originalReferenceId + "_REFUND";
-        // Idempotency check
-        if (idempotencyKeyRepository.existsById("processed_event:wallet:" + refundRefId)) {
-            log.info("Transaction {} already processed for refund", refundRefId);
-            return walletRepository.findById(walletId).orElseThrow();
-        }
-        // Lock the wallet by ID instead
-        Wallet wallet = walletRepository.findByIdForUpdate(walletId).orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
-        if (wallet.getStatus() != WalletStatus.ACTIVE) {
-            throw new WalletInactiveException("Wallet is not active");
-        }
-        wallet.setBalance(wallet.getBalance().add(amount));
-        walletRepository.save(wallet);
-        recordTransaction(wallet, amount, TransactionType.REFUND, refundRefId, "Refund for failed ledger transaction: " + originalReferenceId + " (" + reason + ")", null);
-        // We DO NOT publish another ledger event, because the ledger rejected the first one.
-        return wallet;
-    }
-
     private void recordTransaction(Wallet wallet, BigDecimal amount, TransactionType type, String referenceId, String description, String metadata) {
         WalletTransaction tx = new WalletTransaction();
         tx.setWalletId(wallet.getId());
@@ -146,8 +124,6 @@ public class WalletService {
         tx.setDescription(description);
         tx.setMetadata(metadata);
         transactionRepository.save(tx);
-        IdempotencyKey event = new IdempotencyKey("processed_event:wallet:" + referenceId);
-        idempotencyKeyRepository.save(event);
     }
 
     public WalletService(WalletRepository walletRepository, WalletTransactionRepository transactionRepository, IIdempotencyKeyRepository idempotencyKeyRepository, OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper) {
@@ -175,12 +151,16 @@ public class WalletService {
             payload.put("toId", entityId.toString());
             payload.put("toType", getAccountType(entityType));
         }
-        OutboxEventEntity event = new OutboxEventEntity();
-        event.setAggregateId(referenceId);
-        event.setAggregateType(AggregateType.LEDGER);
-        event.setEventType(EventType.LEDGER_TRANSACTION_REQUEST);
-        event.setPayload(payload.toString());
-        event.setStatus(OutboxStatus.UNPROCESSED);
+        OutboxEventEntity event = OutboxEventEntity.builder()
+                .id(UUID.randomUUID())
+                .createdAt(java.time.LocalDateTime.now())
+                .aggregateId(referenceId)
+                .aggregateType(AggregateType.LEDGER)
+                .eventType(EventType.LEDGER_TRANSACTION_REQUEST)
+                .idempotencyKey(referenceId)
+                .payload(payload.toString())
+                .status(OutboxStatus.UNPROCESSED)
+                .build();
         outboxEventRepository.save(event);
     }
 
@@ -189,5 +169,26 @@ public class WalletService {
         if (entityType == EntityType.RESTAURANT) return "RESTAURANT";
         if (entityType == EntityType.DRIVER) return "DRIVER";
         return "CUSTOMER";
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void publishBudgetAlert(UUID advertiserId, String campaignId, String eventId) {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("advertiserId", advertiserId.toString());
+        if (campaignId != null) {
+            payload.put("campaignId", campaignId);
+        }
+        
+        OutboxEventEntity event = OutboxEventEntity.builder()
+                .id(UUID.randomUUID())
+                .createdAt(java.time.LocalDateTime.now())
+                .aggregateId(advertiserId.toString())
+                .aggregateType(AggregateType.ADVERTISEMENT)
+                .eventType(EventType.AD_BUDGET_ALERT)
+                .idempotencyKey("budget_alert:" + eventId)
+                .payload(payload.toString())
+                .status(OutboxStatus.UNPROCESSED)
+                .build();
+        outboxEventRepository.save(event);
     }
 }

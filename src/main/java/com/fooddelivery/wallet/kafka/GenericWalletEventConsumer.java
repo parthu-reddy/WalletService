@@ -32,7 +32,7 @@ public class GenericWalletEventConsumer {
     }
 
     @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 1000, multiplier = 2.0))
-    @KafkaListener(topics = KafkaConstants.TOPIC_WALLET_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
+    @KafkaListener(topics = KafkaConstants.TOPIC_WALLET_EVENTS, groupId = "${spring.kafka.consumer.group-id}-generic")
     public void consumeWalletEvent(String message,
             @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
         try {

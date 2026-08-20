@@ -1,9 +1,8 @@
 server:
   port: ${SERVER_PORT:8120}
-
 spring:
   config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+    import: optional:classpath:config/platform-defaults.yml,optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   application:
     name: wallet-service
   datasource:
@@ -22,10 +21,6 @@ spring:
     enabled: true
     baseline-on-migrate: true
   kafka:
-    listener:
-      observation-enabled: true
-    template:
-      observation-enabled: true
     bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP:wallet-service-group}
@@ -35,26 +30,8 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
-
 eureka:
   client:
     serviceUrl:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
-  instance:
-    preferIpAddress: true
-
-management:
-  tracing:
-    enabled: true
-    sampling:
-      probability: 1.0
-  otlp:
-    tracing:
-      endpoint: http://localhost:4318/v1/traces
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus
-
-
 spring.main.allow-bean-definition-overriding: true

@@ -18,7 +18,7 @@ spec:
           image: food-delivery/wallet-service:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8096
+            - containerPort: 8120
           envFrom:
             - configMapRef:
                 name: advertisement-config

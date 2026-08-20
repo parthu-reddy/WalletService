@@ -2,11 +2,13 @@ package com.fooddelivery.wallet.dto;
 
 import java.util.UUID;
 import com.fooddelivery.wallet.enums.EntityType;
+import jakarta.validation.constraints.NotBlank;
 
 public class CreateWalletRequest {
     private UUID entityId;
     private EntityType entityType;
-    private String currency = "USD";
+    @NotBlank
+    private String currency = "INR";
 
     public UUID getEntityId() {
         return this.entityId;

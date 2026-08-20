@@ -47,11 +47,10 @@ sequenceDiagram
     activate LS
     LS->>LS: Record Ledger Entry (Step 2)
     alt Ledger Success
-        LS->>Kafka: Publish LedgerResponseEvent (SUCCESS)
-        Kafka->>WS: Update Transaction to COMPLETED
-    else Ledger Failure
-        LS->>Kafka: Publish LedgerResponseEvent (FAILED)
-        Kafka->>WS: Execute reverseDebit() (Compensation)
+        LS->>LS: Commit ledger entry
+    else Ledger Failure (retries exhausted)
+        LS->>Kafka: Forward original payload to ledger-events-dlq
+        Kafka->>WS: LedgerFailureConsumer credits the amount back (Compensation)
     end
     deactivate LS
 ```

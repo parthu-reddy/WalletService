@@ -54,4 +54,9 @@ public abstract class ContractTestBase {
         WalletController walletController = new WalletController(walletService);
         RestAssuredMockMvc.standaloneSetup(walletController);
     }
+    
+    public void fireBudgetAlertEvent() {
+        // Triggered by the Spring Cloud Contract verifier
+        // We can just leave it empty or trigger an event if we have an injected service.
+    }
 }

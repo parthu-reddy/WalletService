@@ -22,15 +22,10 @@ public class WalletController {
 
     private final WalletService walletService;
 
-    @PostMapping
-    public ResponseEntity<WalletDto> createWallet(@RequestBody CreateWalletRequest request) {
-        Wallet wallet = walletService.createWallet(request.getEntityId(), request.getEntityType(), request.getCurrency());
-        return ResponseEntity.ok(mapToDto(wallet));
-    }
 
     @GetMapping("/{entityType}/{entityId}")
     public ResponseEntity<WalletDto> getWallet(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        if (entityType == EntityType.CUSTOMER && userId != null && !userId.equals(entityId.toString())) {
+        if (userId != null && !userId.equals(entityId.toString())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         Wallet wallet = walletService.getWallet(entityId, entityType);
@@ -38,28 +33,29 @@ public class WalletController {
     }
 
     @GetMapping("/{entityType}/{entityId}/transactions")
-    public ResponseEntity<Page<com.fooddelivery.wallet.entity.WalletTransaction>> getTransactions(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = "X-User-Id", required = false) String userId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+    public ResponseEntity<Page<com.fooddelivery.wallet.dto.WalletTransactionDto>> getTransactions(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = "X-User-Id", required = false) String userId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         // Security check: Only allow users to view their own wallet transactions
-        if (entityType == EntityType.CUSTOMER && userId != null && !userId.equals(entityId.toString())) {
+        if (userId != null && !userId.equals(entityId.toString())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         Pageable pageable = PageRequest.of(page, size);
         Page<com.fooddelivery.wallet.entity.WalletTransaction> transactions = walletService.getTransactions(entityId, entityType, pageable);
-        return ResponseEntity.ok(transactions);
+        return ResponseEntity.ok(transactions.map(this::mapTransactionToDto));
     }
 
-    @PostMapping("/{entityType}/{entityId}/debit")
-    public ResponseEntity<WalletDto> debit(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestBody TransactionRequest request) {
-        Wallet wallet = walletService.debit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription(), com.fooddelivery.common.enums.ChargeCategory.ORDER_TOTAL);
-        return ResponseEntity.ok(mapToDto(wallet));
+    private com.fooddelivery.wallet.dto.WalletTransactionDto mapTransactionToDto(com.fooddelivery.wallet.entity.WalletTransaction txn) {
+        com.fooddelivery.wallet.dto.WalletTransactionDto dto = new com.fooddelivery.wallet.dto.WalletTransactionDto();
+        dto.setId(txn.getId());
+        dto.setWalletId(txn.getWalletId());
+        dto.setAmount(txn.getAmount());
+        dto.setTransactionType(txn.getTransactionType());
+        dto.setReferenceId(txn.getReferenceId());
+        dto.setDescription(txn.getDescription());
+        dto.setCreatedAt(txn.getCreatedAt());
+        dto.setMetadata(txn.getMetadata());
+        return dto;
     }
 
-    @PostMapping("/{entityType}/{entityId}/credit")
-    public ResponseEntity<WalletDto> credit(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestBody TransactionRequest request) {
-        // We could parse from request, but Topup is the main external use case.
-        Wallet wallet = walletService.credit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription(), com.fooddelivery.common.enums.ChargeCategory.AD_WALLET_TOPUP);
-        return ResponseEntity.ok(mapToDto(wallet));
-    }
 
     private WalletDto mapToDto(Wallet wallet) {
         WalletDto dto = new WalletDto();
