@@ -26,9 +26,16 @@ public class WalletTopupService {
     }
 
     @Transactional
-    public String createTopup(UUID advertiserId, TopupWalletRequest request) {
+    public String createTopup(UUID advertiserId, TopupWalletRequest request, String idempotencyKey) {
+        String internalOrderId = "WALLET_" + advertiserId.toString() + "_" + idempotencyKey;
+        java.util.Optional<WalletTopup> existingOpt = topupRepository.findByOrderId(internalOrderId);
+        if (existingOpt.isPresent()) {
+            // Idempotent return - do not recreate the order on payment gateway
+            // Returning the existing order id allows the client to retry and get the same intent
+            return internalOrderId; // Or fetch the gateway intent id if stored, but here orderId is returned
+        }
+        
         BigDecimal amountInInr = request.getAmount();
-        String internalOrderId = "WALLET_" + advertiserId.toString() + "_" + UUID.randomUUID().toString();
         String gateway = request.getGatewayName() != null && !request.getGatewayName().isBlank() ? request.getGatewayName() : "RAZORPAY";
         
         WalletTopup topup = new WalletTopup();

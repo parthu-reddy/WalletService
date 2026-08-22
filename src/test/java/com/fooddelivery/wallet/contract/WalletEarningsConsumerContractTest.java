@@ -1,5 +1,7 @@
 package com.fooddelivery.wallet.contract;
 
+import com.fooddelivery.common.contract.KafkaStubMessageSender;
+
 import com.fooddelivery.common.enums.ChargeCategory;
 import com.fooddelivery.wallet.enums.EntityType;
 import com.fooddelivery.wallet.kafka.GenericWalletEventConsumer;

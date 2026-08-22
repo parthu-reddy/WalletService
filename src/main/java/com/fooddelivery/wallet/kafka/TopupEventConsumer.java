@@ -34,7 +34,7 @@ public class TopupEventConsumer {
                 // PaymentGatewayIntegration publishes a FLAT PaymentSucceededEvent plus an
                 // eventType field -- there is no {eventType, payload} envelope. Requiring one meant
                 // advertiser wallet top-ups were silently never credited.
-                JsonNode payload = com.fooddelivery.common.util.EventPayloadUtils.unwrapPayload(root);
+                JsonNode payload = root;
                 if (payload != null && payload.has("orderId") && payload.has("amount")) {
                     String orderId = payload.get("orderId").asText();
                     if (orderId.startsWith("WALLET_")) {

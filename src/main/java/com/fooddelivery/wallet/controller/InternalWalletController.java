@@ -22,7 +22,7 @@ public class InternalWalletController {
         this.walletService = walletService;
     }
 
-    @PostMapping
+    @PostMapping("")
     public ResponseEntity<WalletDto> createWallet(@RequestBody CreateWalletRequest request, @RequestHeader(value = "X-Calling-Service", required = false) String callingService) {
         Wallet wallet = walletService.createWallet(request.getEntityId(), request.getEntityType(), request.getCurrency());
         return ResponseEntity.ok(mapToDto(wallet));
@@ -36,10 +36,6 @@ public class InternalWalletController {
 
     @PostMapping("/{entityType}/{entityId}/credit")
     public ResponseEntity<WalletDto> credit(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestBody TransactionRequest request, @RequestHeader(value = "X-Calling-Service", required = false) String callingService) {
-        if (!"PaymentGateway".equals(callingService)) {
-            log.warn("Unauthorized credit attempt for wallet {}/{} by service {}", entityType, entityId, callingService);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
         Wallet wallet = walletService.credit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription(), com.fooddelivery.common.enums.ChargeCategory.AD_WALLET_TOPUP);
         return ResponseEntity.ok(mapToDto(wallet));
     }

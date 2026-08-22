@@ -45,7 +45,7 @@ public class GenericWalletEventConsumer {
             String eventType = com.fooddelivery.common.util.EventPayloadUtils.resolveEventType(root, headers);
             if (eventType == null) return;
 
-            JsonNode payload = com.fooddelivery.common.util.EventPayloadUtils.unwrapPayload(root);
+            JsonNode payload = root;
             if (payload == null || payload.isMissingNode()) return;
             if ("REFUND_GENERATED".equals(eventType) || "EARNINGS_GENERATED".equals(eventType) || "PAYOUT_GENERATED".equals(eventType)) {
                 UUID entityId = UUID.fromString(payload.get("entityId").asText());
@@ -88,7 +88,7 @@ public class GenericWalletEventConsumer {
     @DltHandler
     public void handleDltWalletEvent(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         log.error("DLQ: Failed to process generic wallet event on topic {} after retries: {}", topic, message);
+        meterRegistry.counter("kafka_dlt_depth_total", "topic", topic).increment();
         meterRegistry.counter("wallet.event.dlq", "topic", topic).increment();
     }
 }
-

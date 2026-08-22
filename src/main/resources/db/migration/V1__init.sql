@@ -7,7 +7,8 @@ CREATE TABLE wallets (
     status VARCHAR(50) NOT NULL,
     version BIGINT,
     created_at TIMESTAMP,
-    updated_at TIMESTAMP
+    updated_at TIMESTAMP,
+    CONSTRAINT uq_wallets_entity UNIQUE (entity_id, entity_type)
 );
 
 CREATE TABLE wallet_transactions (
@@ -17,21 +18,22 @@ CREATE TABLE wallet_transactions (
     transaction_type VARCHAR(50) NOT NULL,
     reference_id VARCHAR(255) NOT NULL UNIQUE,
     description VARCHAR(255),
-    created_at TIMESTAMP NOT NULL
+    created_at TIMESTAMP NOT NULL,
+    metadata TEXT
+);
+
+CREATE TABLE wallet_topups (
+    id UUID PRIMARY KEY,
+    advertiser_id UUID NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    order_id VARCHAR(255) NOT NULL,
+    gateway_name VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (order_id)
 );
 
 CREATE INDEX idx_wallet_transactions_wallet_id_created_at ON wallet_transactions(wallet_id, created_at);
-
-CREATE TABLE processed_events (
-    event_id VARCHAR(255) PRIMARY KEY,
-    processed_at TIMESTAMP NOT NULL
-);
-
-CREATE TABLE wallet_outbox_events (
-    id UUID PRIMARY KEY,
-    aggregate_id VARCHAR(255) NOT NULL,
-    event_type VARCHAR(255) NOT NULL,
-    payload TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    status VARCHAR(50) NOT NULL
-);
+CREATE INDEX idx_wallets_entity_id ON wallets (entity_id);
+CREATE INDEX idx_wallet_transactions_reference_id ON wallet_transactions (reference_id);

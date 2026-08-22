@@ -1,5 +1,7 @@
 package com.fooddelivery.wallet.contract;
 
+import com.fooddelivery.common.contract.KafkaStubMessageSender;
+
 import com.fooddelivery.common.enums.ChargeCategory;
 import com.fooddelivery.wallet.enums.EntityType;
 import com.fooddelivery.wallet.kafka.TopupEventConsumer;
@@ -43,6 +45,11 @@ import static org.mockito.Mockito.verify;
 @EmbeddedKafka(partitions = 1, topics = {"payment-events"})
 class WalletTopupConsumerContractTest {
 
+    /* TopupEventConsumer matches the webhook against a persisted intent; this contract
+       context has no JPA repositories. */
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.wallet.repository.WalletTopupRepository walletTopupRepository;
+
     @org.springframework.boot.SpringBootConfiguration
     @org.springframework.boot.autoconfigure.EnableAutoConfiguration
     @Import(TopupEventConsumer.class)
@@ -61,6 +68,14 @@ class WalletTopupConsumerContractTest {
 
     @Test
     void creditsTheAdvertiserWalletOnTopupCompleted() {
+        // TopupEventConsumer now credits only against a persisted PENDING intent whose amount
+        // matches the webhook. The contract generates the orderId from a regex, so match any.
+        com.fooddelivery.wallet.entity.WalletTopup intent = new com.fooddelivery.wallet.entity.WalletTopup();
+        intent.setAmount(new BigDecimal("250.00"));
+        intent.setStatus(com.fooddelivery.wallet.enums.TopupStatus.PENDING);
+        org.mockito.Mockito.when(walletTopupRepository.findByOrderId(org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(java.util.Optional.of(intent));
+
         stubTrigger.trigger("payment_events_wallet_topup");
 
         await().atMost(15, TimeUnit.SECONDS).untilAsserted(() ->

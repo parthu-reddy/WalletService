@@ -26,7 +26,7 @@ public class Wallet {
     private BigDecimal balance = BigDecimal.ZERO;
     
     @Column(nullable = false, length = 3)
-    private String currency = "INR";
+    private String currency;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

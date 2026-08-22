@@ -54,7 +54,11 @@ public class BillingEventConsumer {
             }
         }
         
-        
+        if (idempotencyKeyRepository.tryClaim("processed_event:billing_consumer:" + eventId) == 0) {
+            log.info("Duplicate billing event detected (key={}), ignoring.", eventId);
+            return;
+        }
+
         try {
             walletService.getWallet(advertiserId, EntityType.ADVERTISER);
             walletService.debit(advertiserId, EntityType.ADVERTISER, amount, eventId, category != null ? category : "Ad Billing", chargeCategoryEnum);
@@ -76,8 +80,11 @@ public class BillingEventConsumer {
         // Persist DLQ message for manual intervention or alert monitoring systems
     }
 
-    public BillingEventConsumer(WalletService walletService, ObjectMapper objectMapper) {
+    private final com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository;
+
+    public BillingEventConsumer(WalletService walletService, ObjectMapper objectMapper, com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository) {
         this.walletService = walletService;
         this.objectMapper = objectMapper;
+        this.idempotencyKeyRepository = idempotencyKeyRepository;
     }
 }

@@ -1,5 +1,7 @@
 package com.fooddelivery.wallet.contract;
 
+import com.fooddelivery.common.contract.KafkaStubMessageSender;
+
 import com.fooddelivery.common.enums.ChargeCategory;
 import com.fooddelivery.wallet.enums.EntityType;
 import com.fooddelivery.wallet.kafka.BillingEventConsumer;
@@ -10,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import com.fooddelivery.common.repository.IIdempotencyKeyRepository;
 import org.springframework.cloud.contract.stubrunner.StubTrigger;
 import org.springframework.cloud.contract.stubrunner.spring.AutoConfigureStubRunner;
 import org.springframework.cloud.contract.stubrunner.spring.StubRunnerProperties;
@@ -27,7 +30,9 @@ import java.util.concurrent.TimeUnit;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /** Consumes UserTrackingService's real ad_billing_events stub and asserts the advertiser is debited. */
 @SpringBootTest(classes = AdBillingConsumerContractTest.TestConfig.class,
@@ -56,12 +61,16 @@ class AdBillingConsumerContractTest {
 
     @MockBean
     private WalletService walletService;
+    
+    @MockBean
+    private IIdempotencyKeyRepository idempotencyKeyRepository;
 
     @Autowired
     private StubTrigger stubTrigger;
 
     @Test
     void debitsAdvertiserForAnImpressionCharge() {
+        when(idempotencyKeyRepository.tryClaim(anyString())).thenReturn(1);
         stubTrigger.trigger("ad_billing_events");
 
         await().atMost(15, TimeUnit.SECONDS).untilAsserted(() ->

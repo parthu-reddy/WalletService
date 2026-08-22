@@ -19,10 +19,9 @@ import static org.mockito.ArgumentMatchers.eq;
 /**
  * Regression cover for the wallet-events envelope mismatch.
  *
- * wallet-events carries two shapes: OrderActionService.emitEarningsGeneratedEvent publishes the
- * payload FLAT, while AdminOrderManualController wraps it as {eventType, payload}. The consumer
- * previously required the wrapped form and returned early on the flat one, so EARNINGS_GENERATED
- * credits were silently discarded.
+ * wallet-events carries flat payloads for OrderActionService.emitEarningsGeneratedEvent
+ * and AdminOrderManualController. The consumer previously required a wrapped form
+ * and returned early on the flat one, so EARNINGS_GENERATED credits were silently discarded.
  */
 class GenericWalletEventConsumerTest {
 
@@ -57,12 +56,12 @@ class GenericWalletEventConsumerTest {
     void stillDebitsReversalFromBodyEventTypeEvenWhenHeaderDisagrees() {
         // AdminOrderManualController publishes body REVERSAL_GENERATED (debit) under an outbox
         // eventType of REFUND_GENERATED (credit). The body must win, or a debit becomes a credit.
-        String enveloped = """
-                {"eventType":"REVERSAL_GENERATED","payload":{"entityId":"%s","entityType":"RESTAURANT",
-                 "amount":"40.00","referenceId":"REV_abc","description":"Reversal"}}
+        String flat = """
+                {"eventType":"REVERSAL_GENERATED","entityId":"%s","entityType":"RESTAURANT",
+                 "amount":"40.00","referenceId":"REV_abc","description":"Reversal"}
                 """.formatted(ENTITY_ID);
 
-        consumer.consumeWalletEvent(enveloped, Map.of("eventType", "REFUND_GENERATED"));
+        consumer.consumeWalletEvent(flat, Map.of("eventType", "REFUND_GENERATED"));
 
         Mockito.verify(walletService).debit(
                 eq(ENTITY_ID), eq(EntityType.RESTAURANT), eq(new BigDecimal("40.00")),

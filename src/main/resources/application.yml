@@ -35,3 +35,6 @@ eureka:
     serviceUrl:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
 spring.main.allow-bean-definition-overriding: true
+
+platform:
+  default-currency: INR

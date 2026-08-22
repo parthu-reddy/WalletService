@@ -8,7 +8,7 @@ public class CreateWalletRequest {
     private UUID entityId;
     private EntityType entityType;
     @NotBlank
-    private String currency = "INR";
+    private String currency;
 
     public UUID getEntityId() {
         return this.entityId;

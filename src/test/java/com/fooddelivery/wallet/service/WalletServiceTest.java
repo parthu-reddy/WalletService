@@ -38,6 +38,11 @@ public class WalletServiceTest {
     @Mock
     private OutboxEventRepository outboxEventRepository;
 
+    /* A real in-memory registry: a mocked MeterRegistry returns null from counter(),
+       which NPEs when WalletService increments wallet_debit_total. */
+    private final io.micrometer.core.instrument.MeterRegistry meterRegistry =
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+
     private ObjectMapper objectMapper;
     private WalletService walletService;
 
@@ -49,7 +54,8 @@ public class WalletServiceTest {
                 transactionRepository,
                 idempotencyKeyRepository,
                 outboxEventRepository,
-                objectMapper
+                objectMapper,
+                meterRegistry
         );
     }
 
@@ -63,7 +69,7 @@ public class WalletServiceTest {
         wallet.setStatus(WalletStatus.ACTIVE);
         wallet.setBalance(new BigDecimal("100.00"));
 
-        when(idempotencyKeyRepository.existsById("processed_event:wallet:REF_123")).thenReturn(false);
+        when(idempotencyKeyRepository.tryClaim("processed_event:wallet:REF_123")).thenReturn(1);
         when(walletRepository.findByEntityIdAndEntityTypeForUpdate(entityId, EntityType.RESTAURANT))
                 .thenReturn(Optional.of(wallet));
 
@@ -72,7 +78,8 @@ public class WalletServiceTest {
         assertEquals(new BigDecimal("60.00"), updatedWallet.getBalance());
         verify(walletRepository, times(1)).save(wallet);
         verify(transactionRepository, times(1)).save(any());
-        verify(idempotencyKeyRepository, times(1)).save(any());
+        // tryClaim inserts the key atomically (ON CONFLICT DO NOTHING); there is no separate save.
+        verify(idempotencyKeyRepository, times(1)).tryClaim("processed_event:wallet:REF_123");
         verify(outboxEventRepository, times(1)).save(any());
     }
 
@@ -86,7 +93,7 @@ public class WalletServiceTest {
         wallet.setStatus(WalletStatus.ACTIVE);
         wallet.setBalance(new BigDecimal("10.00"));
 
-        when(idempotencyKeyRepository.existsById("processed_event:wallet:REF_123")).thenReturn(false);
+        when(idempotencyKeyRepository.tryClaim("processed_event:wallet:REF_123")).thenReturn(1);
         when(walletRepository.findByEntityIdAndEntityTypeForUpdate(entityId, EntityType.RESTAURANT))
                 .thenReturn(Optional.of(wallet));
 
@@ -101,7 +108,7 @@ public class WalletServiceTest {
         Wallet wallet = new Wallet();
         wallet.setBalance(new BigDecimal("100.00"));
 
-        when(idempotencyKeyRepository.existsById("processed_event:wallet:REF_123")).thenReturn(true);
+        when(idempotencyKeyRepository.tryClaim("processed_event:wallet:REF_123")).thenReturn(0);
         when(walletRepository.findByEntityIdAndEntityType(entityId, EntityType.RESTAURANT)).thenReturn(Optional.of(wallet));
 
         Wallet result = walletService.debit(entityId, EntityType.RESTAURANT, new BigDecimal("40.00"), "REF_123", "Test debit", com.fooddelivery.common.enums.ChargeCategory.ORDER_TOTAL);

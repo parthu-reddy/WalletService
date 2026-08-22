@@ -36,8 +36,9 @@ public class WalletService {
     private final IIdempotencyKeyRepository idempotencyKeyRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+    private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
 
-    @org.springframework.beans.factory.annotation.Value("${platform.default-currency:INR}")
+    @org.springframework.beans.factory.annotation.Value("${platform.default-currency}")
     private String defaultCurrency;
 
     @Transactional
@@ -45,7 +46,7 @@ public class WalletService {
         Wallet wallet = new Wallet();
         wallet.setEntityId(entityId);
         wallet.setEntityType(entityType);
-        wallet.setCurrency(currency);
+        wallet.setCurrency(currency != null ? currency : defaultCurrency);
         wallet.setBalance(BigDecimal.ZERO);
         wallet.setStatus(WalletStatus.ACTIVE);
         return walletRepository.save(wallet);
@@ -71,7 +72,9 @@ public class WalletService {
         // Idempotency check
         if (idempotencyKeyRepository.tryClaim("processed_event:wallet:" + referenceId) == 0) {
             log.info("Transaction {} already processed for debit", referenceId);
-            return walletRepository.findByEntityIdAndEntityType(entityId, entityType).orElseThrow();
+            return walletRepository.findByEntityIdAndEntityType(entityId, entityType)
+                    .orElseThrow(() -> new WalletNotFoundException(
+                            "Wallet not found for " + entityType + " " + entityId));
         }
         // Lock the wallet
         Wallet wallet = walletRepository.findByEntityIdAndEntityTypeForUpdate(entityId, entityType).orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
@@ -85,6 +88,9 @@ public class WalletService {
         walletRepository.save(wallet);
         recordTransaction(wallet, amount, TransactionType.DEBIT, referenceId, description, null);
         publishLedgerEvent(entityId, entityType, amount, referenceId, chargeCategory.name(), true);
+        if (meterRegistry != null) {
+            meterRegistry.counter("wallet_debit_total", "entityType", entityType.name()).increment();
+        }
         return wallet;
     }
 
@@ -96,7 +102,9 @@ public class WalletService {
         // Idempotency check
         if (idempotencyKeyRepository.tryClaim("processed_event:wallet:" + referenceId) == 0) {
             log.info("Transaction {} already processed for credit", referenceId);
-            return walletRepository.findByEntityIdAndEntityType(entityId, entityType).orElseThrow();
+            return walletRepository.findByEntityIdAndEntityType(entityId, entityType)
+                    .orElseThrow(() -> new WalletNotFoundException(
+                            "Wallet not found for " + entityType + " " + entityId));
         }
         // Lock the wallet
         Wallet wallet = walletRepository.findByEntityIdAndEntityTypeForUpdate(entityId, entityType).orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
@@ -126,12 +134,13 @@ public class WalletService {
         transactionRepository.save(tx);
     }
 
-    public WalletService(WalletRepository walletRepository, WalletTransactionRepository transactionRepository, IIdempotencyKeyRepository idempotencyKeyRepository, OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper) {
+    public WalletService(WalletRepository walletRepository, WalletTransactionRepository transactionRepository, IIdempotencyKeyRepository idempotencyKeyRepository, OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper, io.micrometer.core.instrument.MeterRegistry meterRegistry) {
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
         this.idempotencyKeyRepository = idempotencyKeyRepository;
         this.outboxEventRepository = outboxEventRepository;
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
     }
 
     private void publishLedgerEvent(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String chargeCategory, boolean isDebit) {
@@ -175,6 +184,10 @@ public class WalletService {
     public void publishBudgetAlert(UUID advertiserId, String campaignId, String eventId) {
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("advertiserId", advertiserId.toString());
+        // CampaignAlertConsumer builds its idempotency key from payload.eventId. Without this the
+        // field is absent, the consumer falls back to a random UUID, and every redelivery claims a
+        // fresh key -- i.e. budget-alert deduplication silently does nothing.
+        payload.put("eventId", eventId);
         if (campaignId != null) {
             payload.put("campaignId", campaignId);
         }
