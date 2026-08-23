@@ -27,7 +27,7 @@ public class LedgerFailureConsumer {
     }
 
     @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 1000, multiplier = 2.0))
-    @KafkaListener(topics = KafkaConstants.TOPIC_LEDGER_EVENTS_DLQ, groupId = "${spring.kafka.consumer.group-id}-ledger-dlq")
+    @KafkaListener(topics = KafkaConstants.TOPIC_LEDGER_EVENTS_DLQ, groupId = "${spring.kafka.consumer.group-id}-ledger-dlq-ledgerfailureconsumer")
     public void consumeLedgerFailure(String message) {
         try {
             log.info("Received ledger failure event for saga compensation: {}", message);

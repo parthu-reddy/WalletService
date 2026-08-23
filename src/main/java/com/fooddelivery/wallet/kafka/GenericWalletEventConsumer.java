@@ -32,16 +32,13 @@ public class GenericWalletEventConsumer {
     }
 
     @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 1000, multiplier = 2.0))
-    @KafkaListener(topics = KafkaConstants.TOPIC_WALLET_EVENTS, groupId = "${spring.kafka.consumer.group-id}-generic")
+    @KafkaListener(topics = KafkaConstants.TOPIC_WALLET_EVENTS, groupId = "${spring.kafka.consumer.group-id}-generic-genericwalleteventconsumer")
     public void consumeWalletEvent(String message,
             @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
         try {
             log.info("Received wallet event: {}", message);
             JsonNode root = objectMapper.readTree(message);
 
-            // Body-first event type and shape-tolerant payload. See EventPayloadUtils -- the
-            // body-first ordering is load-bearing on this topic, where the header and body
-            // deliberately disagree (REVERSAL_GENERATED body vs REFUND_GENERATED header).
             String eventType = com.fooddelivery.common.util.EventPayloadUtils.resolveEventType(root, headers);
             if (eventType == null) return;
 

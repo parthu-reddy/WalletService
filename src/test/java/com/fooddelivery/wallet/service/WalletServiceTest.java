@@ -116,4 +116,45 @@ public class WalletServiceTest {
         assertEquals(new BigDecimal("100.00"), result.getBalance());
         verify(transactionRepository, never()).save(any());
     }
+
+    @Test
+    void verifyLedgerDoubleEntryForReversal() throws Exception {
+        // Validates that consuming a wallet-events REVERSAL_GENERATED emits a strict double-entry ledger outbox event
+        UUID entityId = UUID.randomUUID();
+        Wallet wallet = new Wallet();
+        wallet.setId(UUID.randomUUID());
+        wallet.setEntityId(entityId);
+        wallet.setEntityType(EntityType.RESTAURANT);
+        wallet.setStatus(WalletStatus.ACTIVE);
+        wallet.setBalance(new BigDecimal("100.00"));
+
+        when(idempotencyKeyRepository.tryClaim(anyString())).thenReturn(1);
+        when(walletRepository.findByEntityIdAndEntityTypeForUpdate(entityId, EntityType.RESTAURANT))
+                .thenReturn(Optional.of(wallet));
+
+        org.mockito.ArgumentCaptor<com.fooddelivery.common.outbox.entity.OutboxEventEntity> outboxCaptor = 
+                org.mockito.ArgumentCaptor.forClass(com.fooddelivery.common.outbox.entity.OutboxEventEntity.class);
+
+        com.fooddelivery.wallet.kafka.GenericWalletEventConsumer consumer = 
+                new com.fooddelivery.wallet.kafka.GenericWalletEventConsumer(walletService, objectMapper, meterRegistry);
+
+        String flatPayload = """
+                {"eventType":"REVERSAL_GENERATED","entityId":"%s","entityType":"RESTAURANT",
+                 "amount":"40.00","referenceId":"REV_abc","description":"Reversal"}
+                """.formatted(entityId.toString());
+
+        consumer.consumeWalletEvent(flatPayload, java.util.Map.of("eventType", "REFUND_GENERATED"));
+
+        verify(outboxEventRepository).save(outboxCaptor.capture());
+        com.fooddelivery.common.outbox.entity.OutboxEventEntity event = outboxCaptor.getValue();
+
+        assertEquals(com.fooddelivery.common.constants.AggregateType.LEDGER, event.getAggregateType());
+        assertEquals(com.fooddelivery.common.constants.EventType.LEDGER_TRANSACTION_REQUEST, event.getEventType());
+
+        com.fasterxml.jackson.databind.JsonNode payload = objectMapper.readTree(event.getPayload());
+        assertEquals("40.00", payload.get("amount").asText(), "Amount drawn must match exactly (double-entry)");
+        assertEquals("RESTAURANT", payload.get("fromType").asText(), "Debit must pull from RESTAURANT");
+        assertEquals("PLATFORM", payload.get("toType").asText(), "Debit must flow to PLATFORM");
+        assertEquals("REFUND", payload.get("chargeCategory").asText());
+    }
 }

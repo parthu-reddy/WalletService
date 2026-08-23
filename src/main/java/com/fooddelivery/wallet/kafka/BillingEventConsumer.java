@@ -28,7 +28,7 @@ public class BillingEventConsumer {
     private final ObjectMapper objectMapper;
 
     @RetryableTopic(attempts = "4", backoff = @Backoff(delay = 1000, multiplier = 2.0), exclude = {InsufficientFundsException.class})
-    @KafkaListener(topics = KafkaConstants.TOPIC_AD_BILLING_EVENTS, groupId = "${spring.kafka.consumer.group-id}-billing")
+    @KafkaListener(topics = KafkaConstants.TOPIC_AD_BILLING_EVENTS, groupId = "${spring.kafka.consumer.group-id}-billing-billingeventconsumer")
     public void consumeAdBillingEvent(String message) throws Exception {
         log.info("Received ad billing event: {}", message);
         Map<String, Object> event = objectMapper.readValue(message, new TypeReference<Map<String, Object>>() {

@@ -22,7 +22,7 @@ public class TopupEventConsumer {
     private final com.fooddelivery.wallet.repository.WalletTopupRepository topupRepository;
 
     @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 1000, multiplier = 2.0))
-    @KafkaListener(topics = KafkaConstants.TOPIC_PAYMENT_EVENTS, groupId = "${spring.kafka.consumer.group-id}-topup")
+    @KafkaListener(topics = KafkaConstants.TOPIC_PAYMENT_EVENTS, groupId = "${spring.kafka.consumer.group-id}-topup-topupeventconsumer")
     public void consumePaymentEvent(String message,
             @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
         try {
