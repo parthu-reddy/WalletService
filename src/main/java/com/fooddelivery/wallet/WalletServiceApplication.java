@@ -17,8 +17,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EnableDiscoveryClient
 @EnableScheduling
 @ComponentScan(basePackages = {"com.fooddelivery.wallet", "com.fooddelivery.common"})
-
-@com.fooddelivery.common.outbox.config.EnableOutbox
 public class WalletServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(WalletServiceApplication.class, args);
