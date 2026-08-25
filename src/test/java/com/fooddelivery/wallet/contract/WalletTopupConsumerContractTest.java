@@ -52,6 +52,7 @@ class WalletTopupConsumerContractTest {
 
     @org.springframework.boot.SpringBootConfiguration
     @org.springframework.boot.autoconfigure.EnableAutoConfiguration
+    
     @Import(TopupEventConsumer.class)
     static class TestConfig {
         @Bean

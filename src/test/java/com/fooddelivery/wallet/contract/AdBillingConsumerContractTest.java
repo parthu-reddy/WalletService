@@ -46,6 +46,7 @@ class AdBillingConsumerContractTest {
 
     @org.springframework.boot.SpringBootConfiguration
     @org.springframework.boot.autoconfigure.EnableAutoConfiguration
+    
     @Import(BillingEventConsumer.class)
     static class TestConfig {
         @Bean

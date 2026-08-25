@@ -49,6 +49,7 @@ class WalletEarningsConsumerContractTest {
 
     @org.springframework.boot.SpringBootConfiguration
     @org.springframework.boot.autoconfigure.EnableAutoConfiguration
+    
     @Import(GenericWalletEventConsumer.class)
     static class TestConfig {
         @Bean
