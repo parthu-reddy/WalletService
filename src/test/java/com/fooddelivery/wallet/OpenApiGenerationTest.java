@@ -27,15 +27,17 @@ import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
     "spring.cloud.config.enabled=false",
     "eureka.client.enabled=false",
     "spring.kafka.bootstrap-servers=localhost:9092",
+    "spring.flyway.enabled=false",
     "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.datasource.username=sa",
     "spring.datasource.password=",
+    "spring.sql.init.mode=never",
     "spring.main.allow-bean-definition-overriding=true",
+    "spring.jpa.hibernate.ddl-auto=none",
     "spring.redis.enabled=false",
     "management.health.redis.enabled=false",
     "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration,org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration",
     "jwt.secret=dummy",
     "jwt.expiration=3600000",
     "google.maps.api.key=dummy",
@@ -80,6 +82,7 @@ import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 public class OpenApiGenerationTest {
 
     // Mock critical infrastructure so the context loads
+    
     @MockBean
     private KafkaTemplate<?, ?> kafkaTemplate;
     @MockBean
@@ -89,21 +92,7 @@ public class OpenApiGenerationTest {
     @MockBean
     private com.fooddelivery.common.service.RateLimitingService rateLimitingService;
     @MockBean
-    private io.github.bucket4j.Bucket bucket;
-    @MockBean
     private com.fooddelivery.common.outbox.repository.OutboxEventRepository outboxEventRepository;
-    @MockBean(name="IIdempotencyKeyRepository")
-    private com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository;
-    @MockBean
-    private com.fooddelivery.wallet.repository.WalletRepository walletRepository;
-    @MockBean
-    private com.fooddelivery.wallet.repository.WalletTopupRepository walletTopupRepository;
-    @MockBean
-    private com.fooddelivery.wallet.repository.WalletTransactionRepository walletTransactionRepository;
-    @MockBean
-    private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
-    @MockBean(name = "entityManagerFactory")
-    private jakarta.persistence.EntityManagerFactory entityManagerFactory;
 
     @Autowired(required = false)
     private MockMvc mockMvc;
