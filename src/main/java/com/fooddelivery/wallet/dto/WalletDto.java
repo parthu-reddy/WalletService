@@ -1,16 +1,23 @@
 package com.fooddelivery.wallet.dto;
 
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.UUID;
 import com.fooddelivery.wallet.enums.EntityType;
 import com.fooddelivery.wallet.enums.WalletStatus;
 
 public class WalletDto {
+    @NotNull
     private UUID id;
+    @NotNull
     private UUID entityId;
+    @NotNull
     private EntityType entityType;
+    @NotNull
     private BigDecimal balance;
+    @NotNull
     private String currency;
+    @NotNull
     private WalletStatus status;
 
     public UUID getId() {
