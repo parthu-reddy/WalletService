@@ -2,7 +2,7 @@ package com.fooddelivery.wallet.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fooddelivery.common.enums.ChargeCategory;
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;

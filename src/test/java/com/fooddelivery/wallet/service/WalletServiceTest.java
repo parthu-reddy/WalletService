@@ -3,7 +3,7 @@ package com.fooddelivery.wallet.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fooddelivery.common.outbox.repository.OutboxEventRepository;
 import com.fooddelivery.wallet.entity.Wallet;
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import com.fooddelivery.wallet.enums.WalletStatus;
 import com.fooddelivery.wallet.exception.InsufficientFundsException;
 import com.fooddelivery.common.repository.IIdempotencyKeyRepository;

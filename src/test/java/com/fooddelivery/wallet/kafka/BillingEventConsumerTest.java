@@ -1,7 +1,7 @@
 package com.fooddelivery.wallet.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,6 @@
 package com.fooddelivery.wallet.kafka;
 
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;

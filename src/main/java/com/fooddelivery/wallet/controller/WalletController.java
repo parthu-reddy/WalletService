@@ -4,7 +4,7 @@ import com.fooddelivery.wallet.dto.CreateWalletRequest;
 import com.fooddelivery.wallet.dto.TransactionRequest;
 import com.fooddelivery.wallet.dto.WalletDto;
 import com.fooddelivery.wallet.entity.Wallet;
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +24,7 @@ public class WalletController {
 
 
     @GetMapping("/{entityType}/{entityId}")
-    public ResponseEntity<WalletDto> getWallet(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public ResponseEntity<WalletDto> getWallet(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = com.fooddelivery.common.constants.HeaderConstants.HEADER_USER_ID, required = false) String userId) {
         if (userId != null && !userId.equals(entityId.toString())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
@@ -33,7 +33,7 @@ public class WalletController {
     }
 
     @GetMapping("/{entityType}/{entityId}/transactions")
-    public ResponseEntity<Page<com.fooddelivery.wallet.dto.WalletTransactionDto>> getTransactions(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = "X-User-Id", required = false) String userId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+    public ResponseEntity<Page<com.fooddelivery.wallet.dto.WalletTransactionDto>> getTransactions(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = com.fooddelivery.common.constants.HeaderConstants.HEADER_USER_ID, required = false) String userId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         // Security check: Only allow users to view their own wallet transactions
         if (userId != null && !userId.equals(entityId.toString())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();

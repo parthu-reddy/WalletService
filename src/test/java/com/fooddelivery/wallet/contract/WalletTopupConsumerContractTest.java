@@ -3,7 +3,7 @@ package com.fooddelivery.wallet.contract;
 import com.fooddelivery.common.contract.KafkaStubMessageSender;
 
 import com.fooddelivery.common.enums.ChargeCategory;
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import com.fooddelivery.wallet.kafka.TopupEventConsumer;
 import com.fooddelivery.wallet.service.WalletService;
 import org.junit.jupiter.api.Test;

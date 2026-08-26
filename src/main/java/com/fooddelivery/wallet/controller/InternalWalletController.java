@@ -4,7 +4,7 @@ import com.fooddelivery.wallet.dto.CreateWalletRequest;
 import com.fooddelivery.wallet.dto.TransactionRequest;
 import com.fooddelivery.wallet.dto.WalletDto;
 import com.fooddelivery.wallet.entity.Wallet;
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

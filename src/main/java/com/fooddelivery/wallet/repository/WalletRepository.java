@@ -1,7 +1,7 @@
 package com.fooddelivery.wallet.repository;
 
 import com.fooddelivery.wallet.entity.Wallet;
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;

@@ -3,7 +3,7 @@ package com.fooddelivery.wallet;
 import com.fooddelivery.wallet.controller.WalletController;
 import com.fooddelivery.wallet.service.WalletService;
 import com.fooddelivery.wallet.entity.Wallet;
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 import org.junit.jupiter.api.BeforeEach;
 import java.math.BigDecimal;

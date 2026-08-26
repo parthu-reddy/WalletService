@@ -65,7 +65,7 @@ public class LedgerFailureConsumer {
             BigDecimal amount = new BigDecimal(String.valueOf(event.get("amount")));
             UUID advertiserId = UUID.fromString(fromIdStr);
             // Perform compensating transaction (credit back the amount)
-            walletService.credit(advertiserId, com.fooddelivery.wallet.enums.EntityType.ADVERTISER, amount, transferId + "-rollback", "Saga Rollback: Ledger Failure", com.fooddelivery.common.enums.ChargeCategory.REFUND);
+            walletService.credit(advertiserId, com.fooddelivery.common.enums.EntityType.ADVERTISER, amount, transferId + "-rollback", "Saga Rollback: Ledger Failure", com.fooddelivery.common.enums.ChargeCategory.REFUND);
             log.info("Successfully executed compensating transaction for advertiser {} for amount {}", advertiserId, amount);
         } catch (Exception e) {
             log.error("Failed to process ledger failure event: {}", message, e);

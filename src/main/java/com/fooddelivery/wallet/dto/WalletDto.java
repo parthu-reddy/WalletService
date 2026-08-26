@@ -3,7 +3,7 @@ package com.fooddelivery.wallet.dto;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.UUID;
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import com.fooddelivery.wallet.enums.WalletStatus;
 
 public class WalletDto {

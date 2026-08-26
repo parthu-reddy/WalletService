@@ -1,7 +1,7 @@
 package com.fooddelivery.wallet.dto;
 
 import java.util.UUID;
-import com.fooddelivery.wallet.enums.EntityType;
+import com.fooddelivery.common.enums.EntityType;
 import jakarta.validation.constraints.NotBlank;
 
 public class CreateWalletRequest {
