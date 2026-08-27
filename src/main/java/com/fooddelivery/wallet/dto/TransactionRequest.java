@@ -3,6 +3,7 @@ package com.fooddelivery.wallet.dto;
 import java.math.BigDecimal;
 
 public class TransactionRequest {
+    @jakarta.validation.constraints.NotNull
     private BigDecimal amount;
     private String referenceId;
     private String description;

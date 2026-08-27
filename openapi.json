@@ -454,6 +454,7 @@
         }
       },
       "TransactionRequest" : {
+        "required" : [ "amount" ],
         "type" : "object",
         "properties" : {
           "amount" : {
@@ -529,6 +530,7 @@
         }
       },
       "PageWalletTransactionDto" : {
+        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
         "type" : "object",
         "properties" : {
           "totalPages" : {
@@ -539,18 +541,15 @@
             "type" : "integer",
             "format" : "int64"
           },
-          "sort" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/SortObject"
-            }
-          },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
-          },
           "numberOfElements" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "first" : {
+            "type" : "boolean"
+          },
+          "last" : {
+            "type" : "boolean"
           },
           "number" : {
             "type" : "integer",
@@ -566,11 +565,14 @@
               "$ref" : "#/components/schemas/WalletTransactionDto"
             }
           },
-          "first" : {
-            "type" : "boolean"
+          "sort" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SortObject"
+            }
           },
-          "last" : {
-            "type" : "boolean"
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
           },
           "empty" : {
             "type" : "boolean"
@@ -578,10 +580,12 @@
         }
       },
       "PageableObject" : {
+        "required" : [ "offset", "pageNumber", "pageSize", "paged", "unpaged" ],
         "type" : "object",
         "properties" : {
-          "unpaged" : {
-            "type" : "boolean"
+          "offset" : {
+            "type" : "integer",
+            "format" : "int64"
           },
           "sort" : {
             "type" : "array",
@@ -600,9 +604,8 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "offset" : {
-            "type" : "integer",
-            "format" : "int64"
+          "unpaged" : {
+            "type" : "boolean"
           }
         }
       },
@@ -661,6 +664,7 @@
         }
       },
       "OutboxEventEntity" : {
+        "required" : [ "aggregateId", "aggregateType", "createdAt", "eventType", "id", "payload", "retryCount", "status" ],
         "type" : "object",
         "properties" : {
           "id" : {
@@ -709,6 +713,7 @@
         }
       },
       "PageOutboxEventEntity" : {
+        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
         "type" : "object",
         "properties" : {
           "totalPages" : {
@@ -719,18 +724,15 @@
             "type" : "integer",
             "format" : "int64"
           },
-          "sort" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/SortObject"
-            }
-          },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
-          },
           "numberOfElements" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "first" : {
+            "type" : "boolean"
+          },
+          "last" : {
+            "type" : "boolean"
           },
           "number" : {
             "type" : "integer",
@@ -746,11 +748,14 @@
               "$ref" : "#/components/schemas/OutboxEventEntity"
             }
           },
-          "first" : {
-            "type" : "boolean"
+          "sort" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SortObject"
+            }
           },
-          "last" : {
-            "type" : "boolean"
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
           },
           "empty" : {
             "type" : "boolean"
