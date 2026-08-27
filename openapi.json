@@ -55,7 +55,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "CUSTOMER", "ADVERTISER", "RESTAURANT", "DRIVER" ]
+            "enum" : [ "CUSTOMER", "RESTAURANT", "DRIVER", "PLATFORM", "ADVERTISER" ]
           }
         }, {
           "name" : "entityId",
@@ -107,7 +107,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "CUSTOMER", "ADVERTISER", "RESTAURANT", "DRIVER" ]
+            "enum" : [ "CUSTOMER", "RESTAURANT", "DRIVER", "PLATFORM", "ADVERTISER" ]
           }
         }, {
           "name" : "entityId",
@@ -276,7 +276,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "CUSTOMER", "ADVERTISER", "RESTAURANT", "DRIVER" ]
+            "enum" : [ "CUSTOMER", "RESTAURANT", "DRIVER", "PLATFORM", "ADVERTISER" ]
           }
         }, {
           "name" : "entityId",
@@ -318,7 +318,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "CUSTOMER", "ADVERTISER", "RESTAURANT", "DRIVER" ]
+            "enum" : [ "CUSTOMER", "RESTAURANT", "DRIVER", "PLATFORM", "ADVERTISER" ]
           }
         }, {
           "name" : "entityId",
@@ -361,42 +361,6 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PageWalletTransactionDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/probe/protected" : {
-      "get" : {
-        "tags" : [ "probe-controller" ],
-        "operationId" : "protectedEndpoint",
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/internal/probe" : {
-      "get" : {
-        "tags" : [ "probe-controller" ],
-        "operationId" : "internalEndpoint",
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
                 }
               }
             }
@@ -454,7 +418,7 @@
           },
           "entityType" : {
             "type" : "string",
-            "enum" : [ "CUSTOMER", "ADVERTISER", "RESTAURANT", "DRIVER" ]
+            "enum" : [ "CUSTOMER", "RESTAURANT", "DRIVER", "PLATFORM", "ADVERTISER" ]
           },
           "currency" : {
             "type" : "string"
@@ -475,7 +439,7 @@
           },
           "entityType" : {
             "type" : "string",
-            "enum" : [ "CUSTOMER", "ADVERTISER", "RESTAURANT", "DRIVER" ]
+            "enum" : [ "CUSTOMER", "RESTAURANT", "DRIVER", "PLATFORM", "ADVERTISER" ]
           },
           "balance" : {
             "type" : "number"
@@ -513,6 +477,9 @@
           "message" : {
             "type" : "string"
           },
+          "errorCode" : {
+            "type" : "string"
+          },
           "data" : {
             "type" : "string"
           },
@@ -546,6 +513,9 @@
           "message" : {
             "type" : "string"
           },
+          "errorCode" : {
+            "type" : "string"
+          },
           "data" : {
             "type" : "object",
             "additionalProperties" : {
@@ -568,6 +538,15 @@
           "totalElements" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "sort" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SortObject"
+            }
+          },
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
           },
           "numberOfElements" : {
             "type" : "integer",
@@ -593,15 +572,6 @@
           "last" : {
             "type" : "boolean"
           },
-          "sort" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/SortObject"
-            }
-          },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
-          },
           "empty" : {
             "type" : "boolean"
           }
@@ -610,9 +580,8 @@
       "PageableObject" : {
         "type" : "object",
         "properties" : {
-          "offset" : {
-            "type" : "integer",
-            "format" : "int64"
+          "unpaged" : {
+            "type" : "boolean"
           },
           "sort" : {
             "type" : "array",
@@ -631,8 +600,9 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "unpaged" : {
-            "type" : "boolean"
+          "offset" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },
@@ -749,6 +719,15 @@
             "type" : "integer",
             "format" : "int64"
           },
+          "sort" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SortObject"
+            }
+          },
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
+          },
           "numberOfElements" : {
             "type" : "integer",
             "format" : "int32"
@@ -772,15 +751,6 @@
           },
           "last" : {
             "type" : "boolean"
-          },
-          "sort" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/SortObject"
-            }
-          },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
           },
           "empty" : {
             "type" : "boolean"

@@ -96,6 +96,9 @@ public class OpenApiGenerationTest {
 
     @org.springframework.context.annotation.Configuration
     @org.springframework.context.annotation.ComponentScan(basePackages = {"com.fooddelivery.wallet.controller"})
+    // Relabels structured responses from */* to application/json. Without it every generated
+    // Zod response validator degrades to z.void(); the scoped scan above does not reach it.
+    @org.springframework.context.annotation.Import(com.fooddelivery.common.config.OpenApiJsonMediaTypeCustomizer.class)
     @org.springframework.boot.autoconfigure.EnableAutoConfiguration(excludeName = {"org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration", "org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration", "org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration", "org.springframework.boot.actuate.autoconfigure.security.reactive.ManagementReactiveSecurityAutoConfiguration", "org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration"})
     static class TestApp {
     }
