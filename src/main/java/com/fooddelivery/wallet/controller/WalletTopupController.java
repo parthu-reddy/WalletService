@@ -21,6 +21,8 @@ public class WalletTopupController {
         this.topupService = topupService;
     }
 
+    /** NOTE: advertiserId comes from the path and is NOT ownership-checked -- WalletService has no equivalent of CampaignSecurityHelper. Recorded in FOLLOW_UPS 13a. */
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
     @PostMapping("")
     public ResponseEntity<ApiResponse<Map<String, String>>> topupWallet(
             @PathVariable UUID advertiserId,

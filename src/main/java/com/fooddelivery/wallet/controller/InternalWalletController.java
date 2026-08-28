@@ -14,6 +14,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/internal/wallets")
 @lombok.extern.slf4j.Slf4j
+/*
+ * isAuthenticated() rather than SERVICE-only, deliberately. CustomerOrderService debits a wallet
+ * inside a CompletableFuture.thenApply continuation, and Spring's SecurityContext is thread-local:
+ * whether that continuation still carries the customer's principal or arrives as SERVICE depends on
+ * executor configuration. Requiring a principal at all is the improvement here -- before
+ * FeignSecurityInterceptor minted service identities, background callers sent no headers and no
+ * annotation was possible. Tighten to SERVICE once that continuation's context is pinned by a test.
+ */
 public class InternalWalletController {
 
     private final WalletService walletService;
@@ -22,18 +30,21 @@ public class InternalWalletController {
         this.walletService = walletService;
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
     @PostMapping("")
     public ResponseEntity<WalletDto> createWallet(@RequestBody CreateWalletRequest request, @RequestHeader(value = "X-Calling-Service", required = false) String callingService) {
         Wallet wallet = walletService.createWallet(request.getEntityId(), request.getEntityType(), request.getCurrency());
         return ResponseEntity.ok(mapToDto(wallet));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
     @PostMapping("/{entityType}/{entityId}/debit")
     public ResponseEntity<WalletDto> debit(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestBody TransactionRequest request, @RequestHeader(value = "X-Calling-Service", required = false) String callingService) {
         Wallet wallet = walletService.debit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription(), com.fooddelivery.common.enums.ChargeCategory.ORDER_TOTAL);
         return ResponseEntity.ok(mapToDto(wallet));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
     @PostMapping("/{entityType}/{entityId}/credit")
     public ResponseEntity<WalletDto> credit(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestBody TransactionRequest request, @RequestHeader(value = "X-Calling-Service", required = false) String callingService) {
         Wallet wallet = walletService.credit(entityId, entityType, request.getAmount(), request.getReferenceId(), request.getDescription(), com.fooddelivery.common.enums.ChargeCategory.AD_WALLET_TOPUP);

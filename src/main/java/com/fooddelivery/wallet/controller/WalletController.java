@@ -23,6 +23,7 @@ public class WalletController {
     private final WalletService walletService;
 
 
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
     @GetMapping("/{entityType}/{entityId}")
     public ResponseEntity<WalletDto> getWallet(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = com.fooddelivery.common.constants.HeaderConstants.HEADER_USER_ID, required = false) String userId) {
         if (userId != null && !userId.equals(entityId.toString())) {
@@ -32,6 +33,7 @@ public class WalletController {
         return ResponseEntity.ok(mapToDto(wallet));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
     @GetMapping("/{entityType}/{entityId}/transactions")
     public ResponseEntity<Page<com.fooddelivery.wallet.dto.WalletTransactionDto>> getTransactions(@PathVariable EntityType entityType, @PathVariable UUID entityId, @RequestHeader(value = com.fooddelivery.common.constants.HeaderConstants.HEADER_USER_ID, required = false) String userId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         // Security check: Only allow users to view their own wallet transactions
