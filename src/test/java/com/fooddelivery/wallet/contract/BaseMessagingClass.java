@@ -21,7 +21,7 @@ import org.springframework.test.context.DynamicPropertySource;
         properties = {"spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration,org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"})
 @org.springframework.test.context.ActiveProfiles("contract-test")
 @AutoConfigureMessageVerifier
-@EmbeddedKafka(partitions = 1, topics = {"ad-events"})
+@EmbeddedKafka(partitions = 1, topics = {"ad-events", "ledger-events"})
 public abstract class BaseMessagingClass {
 
     @org.springframework.boot.SpringBootConfiguration
@@ -59,6 +59,51 @@ public abstract class BaseMessagingClass {
                         .aggregateId(advertiserId.toString())
                         .eventType(com.fooddelivery.common.constants.EventType.AD_BUDGET_ALERT)
                         .payload(payload.toString())
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build();
+
+        com.fooddelivery.common.outbox.repository.OutboxEventRepository repo =
+                org.mockito.Mockito.mock(com.fooddelivery.common.outbox.repository.OutboxEventRepository.class);
+        org.mockito.Mockito.when(repo.findTop100ByStatusInOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.anyList()))
+                .thenReturn(new java.util.ArrayList<>(java.util.List.of(outboxEvent)));
+        new com.fooddelivery.common.outbox.service.OutboxProcessor(
+                repo, kafkaTemplate, new io.micrometer.core.instrument.simple.SimpleMeterRegistry())
+            .processOutboxEvents();
+    }
+
+    public void fireLedgerEvent() throws Exception {
+        java.util.UUID transactionId = java.util.UUID.fromString("e573f736-2df6-4f70-a31d-b8d4bb9f3f98");
+        java.util.UUID referenceId = java.util.UUID.fromString("b43f9a72-1b1e-436f-998f-0a0e9b9f71c4");
+        java.util.UUID fromId = java.util.UUID.fromString("c041f92e-3d84-4861-a1bf-4b478d5272a2");
+        java.util.UUID toId = java.util.UUID.fromString("d345f76b-3e81-423c-a9df-6d7c4a123984");
+
+        com.fooddelivery.common.dto.ledger.LedgerLeg leg = 
+                new com.fooddelivery.common.dto.ledger.LedgerLeg(
+                        com.fooddelivery.common.enums.LedgerAccountType.PLATFORM_CLEARING,
+                        fromId,
+                        com.fooddelivery.common.enums.LedgerAccountType.DRIVER_PAYABLE,
+                        toId,
+                        new java.math.BigDecimal("50.00"),
+                        com.fooddelivery.common.enums.ChargeCategory.PAYOUT_TRANSFER,
+                        "payout",
+                        null
+                );
+        
+        com.fooddelivery.common.dto.ledger.LedgerTransactionCommand command =
+                new com.fooddelivery.common.dto.ledger.LedgerTransactionCommand(
+                        transactionId,
+                        referenceId,
+                        "wallet-service",
+                        java.util.List.of(leg)
+                );
+
+        com.fooddelivery.common.outbox.entity.OutboxEventEntity outboxEvent =
+                com.fooddelivery.common.outbox.entity.OutboxEventEntity.builder()
+                        .id(java.util.UUID.randomUUID())
+                        .aggregateType(com.fooddelivery.common.constants.AggregateType.LEDGER)
+                        .aggregateId(transactionId.toString())
+                        .eventType(com.fooddelivery.common.constants.EventType.LEDGER_TRANSACTION_REQUEST)
+                        .payload(objectMapper.writeValueAsString(command))
                         .createdAt(java.time.LocalDateTime.now())
                         .build();
 

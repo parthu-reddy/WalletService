@@ -2,7 +2,7 @@ package com.fooddelivery.wallet.service;
 
 import com.fooddelivery.common.client.PaymentServiceClient;
 import com.fooddelivery.common.dto.payment.CreateOrderRequest;
-import com.fooddelivery.wallet.dto.TopupWalletRequest;
+import com.fooddelivery.common.dto.wallet.TopupWalletRequest;
 import com.fooddelivery.wallet.entity.WalletTopup;
 import com.fooddelivery.wallet.enums.TopupStatus;
 import com.fooddelivery.wallet.repository.WalletTopupRepository;
@@ -28,7 +28,7 @@ public class WalletTopupService {
     @Transactional
     public String createTopup(UUID advertiserId, TopupWalletRequest request, String idempotencyKey) {
         String internalOrderId = "WALLET_" + advertiserId.toString() + "_" + idempotencyKey;
-        java.util.Optional<WalletTopup> existingOpt = topupRepository.findByOrderId(internalOrderId);
+        java.util.Optional<WalletTopup> existingOpt = topupRepository.findByGatewayOrderId(internalOrderId);
         if (existingOpt.isPresent()) {
             // Idempotent return - do not recreate the order on payment gateway
             // Returning the existing order id allows the client to retry and get the same intent
@@ -41,7 +41,7 @@ public class WalletTopupService {
         WalletTopup topup = new WalletTopup();
         topup.setAdvertiserId(advertiserId);
         topup.setAmount(amountInInr);
-        topup.setOrderId(internalOrderId);
+        topup.setGatewayOrderId(internalOrderId);
         topup.setGatewayName(gateway);
         topup.setStatus(TopupStatus.PENDING);
         topupRepository.save(topup);

@@ -4,8 +4,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-import com.fooddelivery.common.enums.EntityType;
-import com.fooddelivery.wallet.enums.WalletStatus;
+import com.fooddelivery.common.enums.WalletEntityType;
 import org.hibernate.annotations.JdbcType;
 
 @Entity
@@ -20,17 +19,16 @@ public class Wallet {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "entity_type", nullable = false)
-    private EntityType entityType;
+    private WalletEntityType entityType;
     
-    @Column(nullable = false, precision = 19, scale = 4)
+    @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
     
     @Column(nullable = false, length = 3)
-    private String currency;
+    private String currency = "INR";
     
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private WalletStatus status = WalletStatus.ACTIVE;
+    private boolean active = true;
     
     @Version
     private Long version;
@@ -62,11 +60,11 @@ public class Wallet {
         this.entityId = entityId;
     }
 
-    public EntityType getEntityType() {
+    public WalletEntityType getEntityType() {
         return this.entityType;
     }
 
-    public void setEntityType(EntityType entityType) {
+    public void setEntityType(WalletEntityType entityType) {
         this.entityType = entityType;
     }
 
@@ -86,12 +84,12 @@ public class Wallet {
         this.currency = currency;
     }
 
-    public WalletStatus getStatus() {
-        return this.status;
+    public boolean isActive() {
+        return this.active;
     }
 
-    public void setStatus(WalletStatus status) {
-        this.status = status;
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public Long getVersion() {

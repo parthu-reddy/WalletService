@@ -23,11 +23,14 @@ public class WalletTopup {
     @Column(nullable = false)
     private BigDecimal amount;
 
-    @Column(name = "order_id", nullable = false, unique = true)
-    private String orderId;
+    @Column(name = "gateway_order_id", nullable = false)
+    private String gatewayOrderId;
 
     @Column(name = "gateway_name", nullable = false)
     private String gatewayName;
+
+    @Column(name = "idempotency_key", unique = true)
+    private String idempotencyKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

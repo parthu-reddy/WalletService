@@ -1,7 +1,7 @@
 package com.fooddelivery.wallet.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fooddelivery.common.enums.EntityType;
+import com.fooddelivery.common.enums.WalletEntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,13 +24,22 @@ public class BillingEventConsumerTest {
     @Mock
     private com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository;
 
+    @Mock
+    private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
     private ObjectMapper objectMapper;
     private BillingEventConsumer consumer;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        consumer = new BillingEventConsumer(walletService, objectMapper, idempotencyKeyRepository);
+        consumer = new BillingEventConsumer(walletService, objectMapper, idempotencyKeyRepository, transactionTemplate);
+        
+        lenient().doAnswer(invocation -> {
+            java.util.function.Consumer<org.springframework.transaction.TransactionStatus> action = invocation.getArgument(0);
+            action.accept(new org.springframework.transaction.support.SimpleTransactionStatus());
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
     }
 
     @Test
@@ -46,10 +55,10 @@ public class BillingEventConsumerTest {
         consumer.consumeAdBillingEvent(message);
 
         // Assert
-        verify(walletService, times(1)).getWallet(UUID.fromString(advertiserId), EntityType.ADVERTISER);
+        verify(walletService, times(1)).getWallet(UUID.fromString(advertiserId), WalletEntityType.ADVERTISER);
         verify(walletService, times(1)).debit(
                 eq(UUID.fromString(advertiserId)),
-                eq(EntityType.ADVERTISER),
+                eq(WalletEntityType.ADVERTISER),
                 eq(new BigDecimal("10.5")),
                 eq(eventId),
                 eq("AD_IMPRESSION"),
@@ -63,7 +72,7 @@ public class BillingEventConsumerTest {
         // Assert - walletService.debit should still only be called ONCE because consumer blocks it
         verify(walletService, times(1)).debit(
                 eq(UUID.fromString(advertiserId)),
-                eq(EntityType.ADVERTISER),
+                eq(WalletEntityType.ADVERTISER),
                 eq(new BigDecimal("10.5")),
                 eq(eventId),
                 eq("AD_IMPRESSION"),

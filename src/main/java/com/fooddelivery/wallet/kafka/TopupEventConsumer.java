@@ -1,6 +1,6 @@
 package com.fooddelivery.wallet.kafka;
 
-import com.fooddelivery.common.enums.EntityType;
+import com.fooddelivery.common.enums.WalletEntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
@@ -43,7 +43,7 @@ public class TopupEventConsumer {
                             String entityIdStr = parts[1];
                             BigDecimal amount = new BigDecimal(payload.get("amount").asText());
                             
-                            java.util.Optional<com.fooddelivery.wallet.entity.WalletTopup> topupOpt = topupRepository.findByOrderId(orderId);
+                            java.util.Optional<com.fooddelivery.wallet.entity.WalletTopup> topupOpt = topupRepository.findByGatewayOrderId(orderId);
                             if (topupOpt.isEmpty()) {
                                 log.error("Received payment for unknown topup order: {}", orderId);
                                 return;
@@ -63,7 +63,7 @@ public class TopupEventConsumer {
 
                             // Use orderId as idempotency key
                             String txId = orderId;
-                            walletService.credit(UUID.fromString(entityIdStr), EntityType.ADVERTISER, amount, txId, "Wallet Top-up", com.fooddelivery.common.enums.ChargeCategory.AD_WALLET_TOPUP);
+                            walletService.credit(UUID.fromString(entityIdStr), WalletEntityType.ADVERTISER, amount, txId, "Wallet Top-up", com.fooddelivery.common.enums.ChargeCategory.AD_WALLET_TOPUP);
                         } else {
                             log.error("Invalid WALLET orderId format: {}", orderId);
                         }

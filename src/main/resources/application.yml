@@ -38,3 +38,6 @@ spring.main.allow-bean-definition-overriding: true
 
 platform:
   default-currency: INR
+idempotency:
+  sweep:
+    retention-days: 400

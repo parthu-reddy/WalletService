@@ -12,11 +12,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication(
     scanBasePackages = {"com.fooddelivery.wallet", "com.fooddelivery.common"}
 )
-@org.springframework.boot.autoconfigure.domain.EntityScan(basePackages = {"com.fooddelivery.wallet", "com.fooddelivery.common"})
-@org.springframework.data.jpa.repository.config.EnableJpaRepositories(basePackages = {"com.fooddelivery.wallet", "com.fooddelivery.common"})
 @EnableDiscoveryClient
 @EnableScheduling
-@ComponentScan(basePackages = {"com.fooddelivery.wallet", "com.fooddelivery.common"})
 public class WalletServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(WalletServiceApplication.class, args);

@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface WalletTopupRepository extends JpaRepository<WalletTopup, UUID> {
-    Optional<WalletTopup> findByOrderId(String orderId);
+    Optional<WalletTopup> findByGatewayOrderId(String gatewayOrderId);
 }

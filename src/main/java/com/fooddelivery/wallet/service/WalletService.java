@@ -3,9 +3,8 @@ package com.fooddelivery.wallet.service;
 import com.fooddelivery.common.entity.IdempotencyKey;
 import com.fooddelivery.wallet.entity.Wallet;
 import com.fooddelivery.wallet.entity.WalletTransaction;
-import com.fooddelivery.common.enums.EntityType;
+import com.fooddelivery.common.enums.WalletEntityType;
 import com.fooddelivery.wallet.enums.TransactionType;
-import com.fooddelivery.wallet.enums.WalletStatus;
 import com.fooddelivery.wallet.exception.InsufficientFundsException;
 import com.fooddelivery.wallet.exception.WalletInactiveException;
 import com.fooddelivery.wallet.exception.WalletNotFoundException;
@@ -42,35 +41,52 @@ public class WalletService {
     private String defaultCurrency;
 
     @Transactional
-    public Wallet createWallet(UUID entityId, EntityType entityType, String currency) {
+    public Wallet createWallet(UUID entityId, WalletEntityType entityType, String currency) {
         Wallet wallet = new Wallet();
         wallet.setEntityId(entityId);
         wallet.setEntityType(entityType);
         wallet.setCurrency(currency != null ? currency : defaultCurrency);
         wallet.setBalance(BigDecimal.ZERO);
-        wallet.setStatus(WalletStatus.ACTIVE);
+        wallet.setActive(true);
         return walletRepository.save(wallet);
     }
 
     @Transactional(readOnly = true)
-    public Wallet getWallet(UUID entityId, EntityType entityType) {
+    public Wallet getWallet(UUID entityId, WalletEntityType entityType) {
         return walletRepository.findByEntityIdAndEntityType(entityId, entityType)
                 .orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
     }
 
+    @Transactional
+    public Wallet getOrCreate(UUID entityId, WalletEntityType entityType, String currency) {
+        String curr = currency != null ? currency : defaultCurrency;
+        walletRepository.insertIfNotExists(UUID.randomUUID(), entityId, entityType.name(), curr);
+        return walletRepository.findByEntityIdAndEntityType(entityId, entityType)
+                .orElseThrow(() -> new IllegalStateException("Wallet should exist after upsert"));
+    }
+
     @Transactional(readOnly = true)
-    public Page<WalletTransaction> getTransactions(UUID entityId, EntityType entityType, Pageable pageable) {
+    public Page<Wallet> getAllWallets(Pageable pageable) {
+        return walletRepository.findAll(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WalletTransaction> getTransactions(UUID entityId, WalletEntityType entityType, Pageable pageable) {
         Wallet wallet = getWallet(entityId, entityType);
         return transactionRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable);
     }
 
+    public java.util.Optional<WalletTransaction> getTransactionByReference(UUID referenceId) {
+        return transactionRepository.findByReferenceId(referenceId);
+    }
+
     @Transactional
-    public Wallet debit(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String description, com.fooddelivery.common.enums.ChargeCategory chargeCategory) {
+    public Wallet debit(UUID entityId, WalletEntityType entityType, BigDecimal amount, String referenceId, String description, com.fooddelivery.common.enums.ChargeCategory chargeCategory) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Debit amount must be positive");
         }
         // Idempotency check
-        if (idempotencyKeyRepository.tryClaim("processed_event:wallet:" + referenceId) == 0) {
+        if (idempotencyKeyRepository.tryClaim("wallet:" + entityType + ":" + entityId + ":" + referenceId) == 0) {
             log.info("Transaction {} already processed for debit", referenceId);
             return walletRepository.findByEntityIdAndEntityType(entityId, entityType)
                     .orElseThrow(() -> new WalletNotFoundException(
@@ -78,7 +94,7 @@ public class WalletService {
         }
         // Lock the wallet
         Wallet wallet = walletRepository.findByEntityIdAndEntityTypeForUpdate(entityId, entityType).orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
-        if (wallet.getStatus() != WalletStatus.ACTIVE) {
+        if (!wallet.isActive()) {
             throw new WalletInactiveException("Wallet is not active");
         }
         if (wallet.getBalance().compareTo(amount) < 0) {
@@ -86,7 +102,7 @@ public class WalletService {
         }
         wallet.setBalance(wallet.getBalance().subtract(amount));
         walletRepository.save(wallet);
-        recordTransaction(wallet, amount, TransactionType.DEBIT, referenceId, description, null);
+        recordTransaction(wallet, amount, TransactionType.DEBIT, referenceId, description, chargeCategory, null);
         publishLedgerEvent(entityId, entityType, amount, referenceId, chargeCategory.name(), true);
         if (meterRegistry != null) {
             meterRegistry.counter("wallet_debit_total", "entityType", entityType.name()).increment();
@@ -95,12 +111,12 @@ public class WalletService {
     }
 
     @Transactional
-    public Wallet credit(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String description, String metadata, com.fooddelivery.common.enums.ChargeCategory chargeCategory) {
+    public Wallet credit(UUID entityId, WalletEntityType entityType, BigDecimal amount, String referenceId, String description, String metadata, com.fooddelivery.common.enums.ChargeCategory chargeCategory) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Credit amount must be positive");
         }
         // Idempotency check
-        if (idempotencyKeyRepository.tryClaim("processed_event:wallet:" + referenceId) == 0) {
+        if (idempotencyKeyRepository.tryClaim("wallet:" + entityType + ":" + entityId + ":" + referenceId) == 0) {
             log.info("Transaction {} already processed for credit", referenceId);
             return walletRepository.findByEntityIdAndEntityType(entityId, entityType)
                     .orElseThrow(() -> new WalletNotFoundException(
@@ -108,27 +124,28 @@ public class WalletService {
         }
         // Lock the wallet
         Wallet wallet = walletRepository.findByEntityIdAndEntityTypeForUpdate(entityId, entityType).orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
-        if (wallet.getStatus() != WalletStatus.ACTIVE) {
+        if (!wallet.isActive()) {
             throw new WalletInactiveException("Wallet is not active");
         }
         wallet.setBalance(wallet.getBalance().add(amount));
         walletRepository.save(wallet);
-        recordTransaction(wallet, amount, TransactionType.CREDIT, referenceId, description, metadata);
+        recordTransaction(wallet, amount, TransactionType.CREDIT, referenceId, description, chargeCategory, metadata);
         publishLedgerEvent(entityId, entityType, amount, referenceId, chargeCategory.name(), false);
         return wallet;
     }
 
     @Transactional
-    public Wallet credit(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String description, com.fooddelivery.common.enums.ChargeCategory chargeCategory) {
+    public Wallet credit(UUID entityId, WalletEntityType entityType, BigDecimal amount, String referenceId, String description, com.fooddelivery.common.enums.ChargeCategory chargeCategory) {
         return credit(entityId, entityType, amount, referenceId, description, null, chargeCategory);
     }
 
-    private void recordTransaction(Wallet wallet, BigDecimal amount, TransactionType type, String referenceId, String description, String metadata) {
+    private void recordTransaction(Wallet wallet, BigDecimal amount, TransactionType type, String referenceId, String description, com.fooddelivery.common.enums.ChargeCategory category, String metadata) {
         WalletTransaction tx = new WalletTransaction();
         tx.setWalletId(wallet.getId());
         tx.setAmount(amount);
         tx.setTransactionType(type);
-        tx.setReferenceId(referenceId);
+        tx.setReferenceId(UUID.fromString(referenceId));
+        tx.setCategory(category);
         tx.setDescription(description);
         tx.setMetadata(metadata);
         transactionRepository.save(tx);
@@ -143,41 +160,55 @@ public class WalletService {
         this.meterRegistry = meterRegistry;
     }
 
-    private void publishLedgerEvent(UUID entityId, EntityType entityType, BigDecimal amount, String referenceId, String chargeCategory, boolean isDebit) {
-        ObjectNode payload = objectMapper.createObjectNode();
-        payload.put("transferId", referenceId);
-        payload.put("amount", amount.toPlainString());
-        payload.put("chargeCategory", chargeCategory);
+    private void publishLedgerEvent(UUID entityId, WalletEntityType entityType, BigDecimal amount, String referenceId, String chargeCategory, boolean isDebit) {
         UUID platformId = new UUID(0, 0);
+        com.fooddelivery.common.dto.ledger.LedgerLeg leg = new com.fooddelivery.common.dto.ledger.LedgerLeg();
+        leg.setAmount(amount);
+        leg.setCategory(com.fooddelivery.common.enums.ChargeCategory.valueOf(chargeCategory));
         if (isDebit) {
-            payload.put("fromId", entityId.toString());
-            payload.put("fromType", getAccountType(entityType));
-            payload.put("toId", platformId.toString());
-            payload.put("toType", "PLATFORM");
+            leg.setFromId(entityId);
+            leg.setFromType(com.fooddelivery.common.enums.LedgerAccountType.valueOf(getAccountType(entityType)));
+            leg.setToId(platformId);
+            leg.setToType(com.fooddelivery.common.enums.LedgerAccountType.PLATFORM_CLEARING);
         } else {
-            payload.put("fromId", platformId.toString());
-            payload.put("fromType", "PLATFORM");
-            payload.put("toId", entityId.toString());
-            payload.put("toType", getAccountType(entityType));
+            leg.setFromId(platformId);
+            leg.setFromType(com.fooddelivery.common.enums.LedgerAccountType.PLATFORM_CLEARING);
+            leg.setToId(entityId);
+            leg.setToType(com.fooddelivery.common.enums.LedgerAccountType.valueOf(getAccountType(entityType)));
         }
+
+        UUID txId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("wallet-service", referenceId, isDebit ? "DEBIT" : "CREDIT");
+        com.fooddelivery.common.dto.ledger.LedgerTransactionCommand cmd = new com.fooddelivery.common.dto.ledger.LedgerTransactionCommand(
+                txId,
+                UUID.fromString(referenceId),
+                "wallet-service",
+                java.util.List.of(leg)
+        );
+
+        String payloadStr;
+        try {
+            payloadStr = objectMapper.writeValueAsString(cmd);
+        } catch (Exception e) {
+            log.error("Failed to serialize LedgerTransactionCommand", e);
+            throw new RuntimeException("Failed to serialize LedgerTransactionCommand", e);
+        }
+
         OutboxEventEntity event = OutboxEventEntity.builder()
                 .id(UUID.randomUUID())
                 .createdAt(java.time.LocalDateTime.now())
-                .aggregateId(referenceId)
+                .aggregateId(txId.toString())
                 .aggregateType(AggregateType.LEDGER)
                 .eventType(EventType.LEDGER_TRANSACTION_REQUEST)
-                .idempotencyKey(referenceId)
-                .payload(payload.toString())
+                .idempotencyKey(txId.toString())
+                .payload(payloadStr)
                 .status(OutboxStatus.UNPROCESSED)
                 .build();
         outboxEventRepository.save(event);
     }
 
-    private String getAccountType(EntityType entityType) {
-        if (entityType == EntityType.ADVERTISER) return "ADVERTISER_WALLET";
-        if (entityType == EntityType.RESTAURANT) return "RESTAURANT";
-        if (entityType == EntityType.DRIVER) return "DRIVER";
-        return "CUSTOMER";
+    private String getAccountType(WalletEntityType entityType) {
+        if (entityType == WalletEntityType.ADVERTISER) return "ADVERTISER_PREPAID";
+        return "CUSTOMER_CREDIT";
     }
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)

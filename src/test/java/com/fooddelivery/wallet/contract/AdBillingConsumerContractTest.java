@@ -3,7 +3,7 @@ package com.fooddelivery.wallet.contract;
 import com.fooddelivery.common.contract.KafkaStubMessageSender;
 
 import com.fooddelivery.common.enums.ChargeCategory;
-import com.fooddelivery.common.enums.EntityType;
+import com.fooddelivery.common.enums.WalletEntityType;
 import com.fooddelivery.wallet.kafka.BillingEventConsumer;
 import com.fooddelivery.wallet.service.WalletService;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -23,6 +23,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.messaging.Message;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +51,17 @@ class AdBillingConsumerContractTest {
     @Import(BillingEventConsumer.class)
     static class TestConfig {
         @Bean
+        public TransactionTemplate transactionTemplate() {
+            TransactionTemplate tt = org.mockito.Mockito.mock(TransactionTemplate.class);
+            org.mockito.Mockito.doAnswer(invocation -> {
+                java.util.function.Consumer<org.springframework.transaction.TransactionStatus> action = invocation.getArgument(0);
+                action.accept(new org.springframework.transaction.support.SimpleTransactionStatus());
+                return null;
+            }).when(tt).executeWithoutResult(any());
+            return tt;
+        }
+
+        @Bean
         public MessageVerifierSender<Message<?>> kafkaStubMessageSender(KafkaTemplate<String, String> t) {
             return new KafkaStubMessageSender(t);
         }
@@ -76,7 +88,7 @@ class AdBillingConsumerContractTest {
 
         await().atMost(15, TimeUnit.SECONDS).untilAsserted(() ->
                 verify(walletService).debit(
-                        any(), eq(EntityType.ADVERTISER), eq(new BigDecimal("0.50")),
+                        any(), eq(WalletEntityType.ADVERTISER), eq(new BigDecimal("0.50")),
                         any(), any(), eq(ChargeCategory.AD_IMPRESSION)));
     }
 }

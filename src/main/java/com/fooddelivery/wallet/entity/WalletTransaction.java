@@ -5,11 +5,14 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import com.fooddelivery.wallet.enums.TransactionType;
+import com.fooddelivery.common.enums.ChargeCategory;
 import org.hibernate.annotations.JdbcType;
 
 @Entity
 @Table(name = "wallet_transactions", indexes = {
     @Index(name = "idx_wallet_transactions_wallet_id_created_at", columnList = "wallet_id, created_at")
+}, uniqueConstraints = {
+    @UniqueConstraint(name = "uq_wallet_transactions", columnNames = {"wallet_id", "reference_id", "transaction_type"})
 })
 public class WalletTransaction {
     @Id
@@ -19,15 +22,19 @@ public class WalletTransaction {
     @Column(name = "wallet_id", nullable = false)
     private UUID walletId;
     
-    @Column(nullable = false, precision = 19, scale = 4)
+    @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal amount;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false)
     private TransactionType transactionType;
     
-    @Column(name = "reference_id", nullable = false, unique = true)
-    private String referenceId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false)
+    private ChargeCategory category;
+    
+    @Column(name = "reference_id", nullable = false)
+    private UUID referenceId;
     
     @Column(name = "description")
     private String description;
@@ -70,11 +77,19 @@ public class WalletTransaction {
         this.transactionType = transactionType;
     }
 
-    public String getReferenceId() {
+    public ChargeCategory getCategory() {
+        return this.category;
+    }
+
+    public void setCategory(ChargeCategory category) {
+        this.category = category;
+    }
+
+    public UUID getReferenceId() {
         return this.referenceId;
     }
 
-    public void setReferenceId(String referenceId) {
+    public void setReferenceId(UUID referenceId) {
         this.referenceId = referenceId;
     }
 

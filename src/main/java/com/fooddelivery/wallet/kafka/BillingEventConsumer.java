@@ -1,6 +1,6 @@
 package com.fooddelivery.wallet.kafka;
 
-import com.fooddelivery.common.enums.EntityType;
+import com.fooddelivery.common.enums.WalletEntityType;
 import com.fooddelivery.wallet.service.WalletService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -26,6 +26,7 @@ public class BillingEventConsumer {
 
     private final WalletService walletService;
     private final ObjectMapper objectMapper;
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
     @RetryableTopic(attempts = "4", backoff = @Backoff(delay = 1000, multiplier = 2.0), exclude = {InsufficientFundsException.class})
     @KafkaListener(topics = KafkaConstants.TOPIC_AD_BILLING_EVENTS, groupId = "${spring.kafka.consumer.group-id}-billing-billingeventconsumer")
@@ -54,22 +55,26 @@ public class BillingEventConsumer {
             }
         }
         
-        if (idempotencyKeyRepository.tryClaim("processed_event:billing_consumer:" + eventId) == 0) {
-            log.info("Duplicate billing event detected (key={}), ignoring.", eventId);
-            return;
-        }
+        final com.fooddelivery.common.enums.ChargeCategory finalChargeCategoryEnum = chargeCategoryEnum;
+        
+        transactionTemplate.executeWithoutResult(status -> {
+            if (idempotencyKeyRepository.tryClaim("processed_event:billing_consumer:" + eventId) == 0) {
+                log.info("Duplicate billing event detected (key={}), ignoring.", eventId);
+                return;
+            }
 
-        try {
-            walletService.getWallet(advertiserId, EntityType.ADVERTISER);
-            walletService.debit(advertiserId, EntityType.ADVERTISER, amount, eventId, category != null ? category : "Ad Billing", chargeCategoryEnum);
-        } catch (com.fooddelivery.wallet.exception.WalletNotFoundException e) {
-            log.warn("Wallet not found for advertiser {}. Deferring to retry...", advertiserId);
-            throw e;
-        } catch (InsufficientFundsException e) {
-            log.warn("Advertiser {} has insufficient funds. Emitting AD_BUDGET_ALERT", advertiserId);
-            walletService.publishBudgetAlert(advertiserId, campaignId, eventId);
-            throw e; // still throw so it goes to DLQ (since we excluded it, actually if excluded it might go directly to DLQ or be ignored based on Spring config, but throwing is safest)
-        }
+            try {
+                walletService.getWallet(advertiserId, WalletEntityType.ADVERTISER);
+                walletService.debit(advertiserId, WalletEntityType.ADVERTISER, amount, eventId, category != null ? category : "Ad Billing", finalChargeCategoryEnum);
+            } catch (com.fooddelivery.wallet.exception.WalletNotFoundException e) {
+                log.warn("Wallet not found for advertiser {}. Deferring to retry...", advertiserId);
+                throw e;
+            } catch (InsufficientFundsException e) {
+                log.warn("Advertiser {} has insufficient funds. Emitting AD_BUDGET_ALERT", advertiserId);
+                walletService.publishBudgetAlert(advertiserId, campaignId, eventId);
+                throw e; // still throw so it goes to DLQ (since we excluded it, actually if excluded it might go directly to DLQ or be ignored based on Spring config, but throwing is safest)
+            }
+        });
     }
 
 
@@ -82,9 +87,10 @@ public class BillingEventConsumer {
 
     private final com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository;
 
-    public BillingEventConsumer(WalletService walletService, ObjectMapper objectMapper, com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository) {
+    public BillingEventConsumer(WalletService walletService, ObjectMapper objectMapper, com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository, org.springframework.transaction.support.TransactionTemplate transactionTemplate) {
         this.walletService = walletService;
         this.objectMapper = objectMapper;
         this.idempotencyKeyRepository = idempotencyKeyRepository;
+        this.transactionTemplate = transactionTemplate;
     }
 }

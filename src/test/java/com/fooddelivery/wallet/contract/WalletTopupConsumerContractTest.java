@@ -3,7 +3,7 @@ package com.fooddelivery.wallet.contract;
 import com.fooddelivery.common.contract.KafkaStubMessageSender;
 
 import com.fooddelivery.common.enums.ChargeCategory;
-import com.fooddelivery.common.enums.EntityType;
+import com.fooddelivery.common.enums.WalletEntityType;
 import com.fooddelivery.wallet.kafka.TopupEventConsumer;
 import com.fooddelivery.wallet.service.WalletService;
 import org.junit.jupiter.api.Test;
@@ -74,14 +74,14 @@ class WalletTopupConsumerContractTest {
         com.fooddelivery.wallet.entity.WalletTopup intent = new com.fooddelivery.wallet.entity.WalletTopup();
         intent.setAmount(new BigDecimal("250.00"));
         intent.setStatus(com.fooddelivery.wallet.enums.TopupStatus.PENDING);
-        org.mockito.Mockito.when(walletTopupRepository.findByOrderId(org.mockito.ArgumentMatchers.anyString()))
+        org.mockito.Mockito.when(walletTopupRepository.findByGatewayOrderId(org.mockito.ArgumentMatchers.anyString()))
                 .thenReturn(java.util.Optional.of(intent));
 
         stubTrigger.trigger("payment_events_wallet_topup");
 
         await().atMost(15, TimeUnit.SECONDS).untilAsserted(() ->
                 verify(walletService).credit(
-                        any(), eq(EntityType.ADVERTISER),
+                        any(), eq(WalletEntityType.ADVERTISER),
                         // BigDecimal.equals compares scale, and asText() on a JSON number can
                         // yield "250.0" rather than "250.00" -- compare by value.
                         org.mockito.ArgumentMatchers.argThat(
