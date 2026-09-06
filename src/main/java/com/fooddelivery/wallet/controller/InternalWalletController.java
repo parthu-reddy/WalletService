@@ -49,10 +49,10 @@ public class InternalWalletController {
     }
 
     @GetMapping("/{entityType}/{entityId}/transactions")
-    public ResponseEntity<org.springframework.data.domain.Page<com.fooddelivery.wallet.dto.WalletTransactionDto>> getTransactions(@PathVariable WalletEntityType entityType, @PathVariable UUID entityId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+    public ResponseEntity<com.fooddelivery.common.dto.PageResponseDto<com.fooddelivery.wallet.dto.WalletTransactionDto>> getTransactions(@PathVariable WalletEntityType entityType, @PathVariable UUID entityId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending());
         org.springframework.data.domain.Page<com.fooddelivery.wallet.entity.WalletTransaction> transactions = walletService.getTransactions(entityId, entityType, pageable);
-        return ResponseEntity.ok(transactions.map(this::mapTransactionToDto));
+        return ResponseEntity.ok(com.fooddelivery.common.dto.PageResponseDto.of(transactions.map(this::mapTransactionToDto)));
     }
 
     private com.fooddelivery.wallet.dto.WalletTransactionDto mapTransactionToDto(com.fooddelivery.wallet.entity.WalletTransaction txn) {
@@ -89,11 +89,11 @@ public class InternalWalletController {
 
     // Endpoint: /api/v1/internal/wallets/balances
     @GetMapping("/balances")
-    public ResponseEntity<org.springframework.data.domain.Page<WalletDto>> getBalances(
-            @RequestParam(defaultValue = "0") int page, 
-            @RequestParam(defaultValue = "100") int size) {
+    public ResponseEntity<com.fooddelivery.common.dto.PageResponseDto<WalletDto>> getBalances(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
         org.springframework.data.domain.Page<Wallet> wallets = walletService.getAllWallets(pageable);
-        return ResponseEntity.ok(wallets.map(this::mapToDto));
+        return ResponseEntity.ok(com.fooddelivery.common.dto.PageResponseDto.of(wallets.map(this::mapToDto)));
     }
 }
