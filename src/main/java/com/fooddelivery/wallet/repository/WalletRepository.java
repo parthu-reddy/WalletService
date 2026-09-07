@@ -12,6 +12,7 @@ import jakarta.persistence.LockModeType;
 
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public interface WalletRepository extends JpaRepository<Wallet, UUID> {
@@ -27,6 +28,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
     Optional<Wallet> findByIdForUpdate(@Param("id") UUID id);
 
     @Modifying
+    @Transactional
     @Query(value = "INSERT INTO wallets (id, entity_id, entity_type, balance, currency, active, version, created_at, updated_at) " +
                    "VALUES (:id, :entityId, :entityType, 0, :currency, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
                    "ON CONFLICT (entity_type, entity_id) DO NOTHING", nativeQuery = true)

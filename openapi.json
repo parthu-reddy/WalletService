@@ -324,7 +324,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/PageWalletTransactionDto"
+                  "$ref" : "#/components/schemas/PageResponseDtoWalletTransactionDto"
                 }
               }
             }
@@ -379,7 +379,7 @@
           "schema" : {
             "type" : "integer",
             "format" : "int32",
-            "default" : 100
+            "default" : 50
           }
         } ],
         "responses" : {
@@ -388,7 +388,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/PageWalletDto"
+                  "$ref" : "#/components/schemas/PageResponseDtoWalletDto"
                 }
               }
             }
@@ -437,6 +437,7 @@
   "components" : {
     "schemas" : {
       "CreateWalletRequest" : {
+        "required" : [ "currency" ],
         "type" : "object",
         "properties" : {
           "entityId" : {
@@ -453,6 +454,7 @@
         }
       },
       "WalletDto" : {
+        "required" : [ "balance", "currency", "entityId", "entityType", "id", "status" ],
         "type" : "object",
         "properties" : {
           "id" : {
@@ -560,10 +562,16 @@
           }
         }
       },
-      "PageWalletTransactionDto" : {
+      "PageResponseDtoWalletTransactionDto" : {
         "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
         "type" : "object",
         "properties" : {
+          "content" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WalletTransactionDto"
+            }
+          },
           "totalElements" : {
             "type" : "integer",
             "format" : "int64"
@@ -572,19 +580,6 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
-          },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
-          },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "first" : {
-            "type" : "boolean"
-          },
           "last" : {
             "type" : "boolean"
           },
@@ -592,59 +587,18 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "content" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/WalletTransactionDto"
-            }
-          },
           "number" : {
             "type" : "integer",
             "format" : "int32"
           },
-          "empty" : {
-            "type" : "boolean"
-          }
-        }
-      },
-      "PageableObject" : {
-        "required" : [ "offset", "pageNumber", "pageSize", "paged", "unpaged" ],
-        "type" : "object",
-        "properties" : {
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
-          },
-          "paged" : {
+          "first" : {
             "type" : "boolean"
           },
-          "pageNumber" : {
+          "numberOfElements" : {
             "type" : "integer",
             "format" : "int32"
           },
-          "pageSize" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "unpaged" : {
-            "type" : "boolean"
-          },
-          "offset" : {
-            "type" : "integer",
-            "format" : "int64"
-          }
-        }
-      },
-      "SortObject" : {
-        "required" : [ "empty", "sorted", "unsorted" ],
-        "type" : "object",
-        "properties" : {
           "empty" : {
-            "type" : "boolean"
-          },
-          "sorted" : {
-            "type" : "boolean"
-          },
-          "unsorted" : {
             "type" : "boolean"
           }
         }
@@ -683,10 +637,16 @@
           }
         }
       },
-      "PageWalletDto" : {
+      "PageResponseDtoWalletDto" : {
         "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
         "type" : "object",
         "properties" : {
+          "content" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WalletDto"
+            }
+          },
           "totalElements" : {
             "type" : "integer",
             "format" : "int64"
@@ -695,19 +655,6 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
-          },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
-          },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "first" : {
-            "type" : "boolean"
-          },
           "last" : {
             "type" : "boolean"
           },
@@ -715,13 +662,14 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "content" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/WalletDto"
-            }
-          },
           "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "first" : {
+            "type" : "boolean"
+          },
+          "numberOfElements" : {
             "type" : "integer",
             "format" : "int32"
           },

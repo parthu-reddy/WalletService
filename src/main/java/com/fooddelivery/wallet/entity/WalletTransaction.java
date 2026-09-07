@@ -13,7 +13,10 @@ import org.hibernate.annotations.JdbcType;
     @Index(name = "idx_wallet_transactions_wallet_id_created_at", columnList = "wallet_id, created_at")
 }, uniqueConstraints = {
     @UniqueConstraint(name = "uq_wallet_transactions", columnNames = {"wallet_id", "reference_id", "transaction_type"})
-})
+})@lombok.AllArgsConstructor
+@lombok.NoArgsConstructor
+@lombok.Data
+
 public class WalletTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

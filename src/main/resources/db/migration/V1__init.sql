@@ -28,9 +28,10 @@ CREATE TABLE wallet_topups (
     id UUID PRIMARY KEY,
     advertiser_id UUID NOT NULL,
     amount NUMERIC(14,2) NOT NULL,
-    order_id VARCHAR(255) NOT NULL UNIQUE,
+    gateway_order_id VARCHAR(255) NOT NULL DEFAULT '',
     gateway_name VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL,
+    idempotency_key VARCHAR(255) UNIQUE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

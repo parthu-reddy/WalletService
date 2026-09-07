@@ -8,7 +8,10 @@ import com.fooddelivery.common.enums.WalletEntityType;
 import org.hibernate.annotations.JdbcType;
 
 @Entity
-@Table(name = "wallets")
+@Table(name = "wallets")@lombok.AllArgsConstructor
+@lombok.NoArgsConstructor
+@lombok.Data
+
 public class Wallet {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
