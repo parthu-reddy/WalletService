@@ -39,11 +39,14 @@ public class WalletTopupServiceTest {
         String internalOrderId = "WALLET_" + advertiserId.toString() + "_" + idempotencyKey;
 
         WalletTopup existing = new WalletTopup();
+        existing.setId(java.util.UUID.randomUUID());
         when(topupRepository.findByGatewayOrderId(internalOrderId)).thenReturn(Optional.of(existing));
 
-        String result = walletTopupService.createTopup(advertiserId, request, idempotencyKey);
+        WalletTopupService.TopupCreated result = walletTopupService.createTopup(advertiserId, request, idempotencyKey);
 
-        assertEquals(internalOrderId, result);
+        assertEquals(internalOrderId, result.gatewayOrderId());
+        // The caller polls by top-up id; a retry must name the same row, not mint a new one.
+        assertEquals(existing.getId(), result.topupId());
         verify(topupRepository, never()).save(any());
         verify(paymentClient, never()).createOrder(anyString(), any());
     }
@@ -60,9 +63,10 @@ public class WalletTopupServiceTest {
         when(topupRepository.findByGatewayOrderId(internalOrderId)).thenReturn(Optional.empty());
         when(paymentClient.createOrder(eq("RAZORPAY"), any(CreateOrderRequest.class))).thenReturn("GATEWAY_INTENT_ID");
 
-        String result = walletTopupService.createTopup(advertiserId, request, idempotencyKey);
+        WalletTopupService.TopupCreated result = walletTopupService.createTopup(advertiserId, request, idempotencyKey);
 
-        assertEquals("GATEWAY_INTENT_ID", result);
+        assertEquals("GATEWAY_INTENT_ID", result.gatewayOrderId());
+        assertNotNull(result.topupId(), "the caller cannot poll a top-up whose id it was not given");
         verify(topupRepository, times(1)).save(any(WalletTopup.class));
         verify(paymentClient, times(1)).createOrder(eq("RAZORPAY"), any(CreateOrderRequest.class));
     }

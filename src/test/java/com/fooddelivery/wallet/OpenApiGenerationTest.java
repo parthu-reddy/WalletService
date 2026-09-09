@@ -94,6 +94,12 @@ public class OpenApiGenerationTest {
     @org.springframework.boot.test.mock.mockito.MockBean
     private com.fooddelivery.wallet.service.WalletService walletService;
 
+    // PayeeWalletController takes both. The scoped scan below reaches only the controller package,
+    // so anything a controller depends on has to be mocked here or the spec silently stops
+    // regenerating -- the SPEC-DRIFT that left the UI calling endpoints that no longer existed.
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.common.security.money.MoneyAccessPolicy moneyAccessPolicy;
+
     @org.springframework.context.annotation.Configuration
     @org.springframework.context.annotation.ComponentScan(basePackages = {"com.fooddelivery.wallet.controller"})
     // Relabels structured responses from */* to application/json. Without it every generated

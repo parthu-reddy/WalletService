@@ -244,10 +244,144 @@
         }
       }
     },
+    "/api/v1/money/advertiser/{entityType}/{entityId}" : {
+      "get" : {
+        "tags" : [ "payee-wallet-controller" ],
+        "operationId" : "getWallet",
+        "parameters" : [ {
+          "name" : "entityType",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "CUSTOMER", "ADVERTISER" ]
+          }
+        }, {
+          "name" : "entityId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WalletDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/money/advertiser/{entityType}/{entityId}/transactions" : {
+      "get" : {
+        "tags" : [ "payee-wallet-controller" ],
+        "operationId" : "getTransactions",
+        "parameters" : [ {
+          "name" : "entityType",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "CUSTOMER", "ADVERTISER" ]
+          }
+        }, {
+          "name" : "entityId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseDtoWalletTransactionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/money/advertiser/{entityType}/{entityId}/topups/{topupId}" : {
+      "get" : {
+        "tags" : [ "payee-wallet-controller" ],
+        "operationId" : "getTopupStatus",
+        "parameters" : [ {
+          "name" : "entityType",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "CUSTOMER", "ADVERTISER" ]
+          }
+        }, {
+          "name" : "entityId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "topupId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "type" : "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/internal/wallets/{entityType}/{entityId}" : {
       "get" : {
         "tags" : [ "internal-wallet-controller" ],
-        "operationId" : "getWallet",
+        "operationId" : "getWallet_1",
         "parameters" : [ {
           "name" : "entityType",
           "in" : "path",
@@ -282,7 +416,7 @@
     "/api/v1/internal/wallets/{entityType}/{entityId}/transactions" : {
       "get" : {
         "tags" : [ "internal-wallet-controller" ],
-        "operationId" : "getTransactions",
+        "operationId" : "getTransactions_1",
         "parameters" : [ {
           "name" : "entityType",
           "in" : "path",

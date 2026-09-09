@@ -95,6 +95,7 @@ public abstract class BaseMessagingClass {
                         transactionId,
                         referenceId,
                         "wallet-service",
+                        "PAYOUT",
                         java.util.List.of(leg)
                 );
 

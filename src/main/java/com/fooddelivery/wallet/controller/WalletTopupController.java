@@ -29,10 +29,11 @@ public class WalletTopupController {
             @Validated @RequestBody TopupWalletRequest request,
             @RequestHeader(value = "Idempotency-Key", required = true) String idempotencyKey) {
         
-        String intentOrOrderId = topupService.createTopup(advertiserId, request, idempotencyKey);
+        WalletTopupService.TopupCreated created = topupService.createTopup(advertiserId, request, idempotencyKey);
         Map<String, String> data = new HashMap<>();
-        data.put("orderId", intentOrOrderId);
-        
+        data.put("topupId", created.topupId().toString());
+        data.put("orderId", created.gatewayOrderId());
+
         return ResponseEntity.ok(ApiResponse.success(data, "Topup initiated successfully"));
     }
 }

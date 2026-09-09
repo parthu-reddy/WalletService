@@ -89,4 +89,5 @@ class WalletTopupConsumerContractTest {
                                 a -> a != null && a.compareTo(new BigDecimal("250.00")) == 0),
                         any(), any(), eq(ChargeCategory.AD_WALLET_TOPUP)));
     }
+
 }

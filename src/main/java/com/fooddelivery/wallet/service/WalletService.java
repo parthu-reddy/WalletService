@@ -177,11 +177,13 @@ public class WalletService {
             leg.setToType(com.fooddelivery.common.enums.LedgerAccountType.valueOf(getAccountType(entityType)));
         }
 
-        UUID txId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("wallet-service", referenceId, isDebit ? "DEBIT" : "CREDIT");
+        String movementLeg = isDebit ? "DEBIT" : "CREDIT";
+        UUID txId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("wallet-service", referenceId, movementLeg);
         com.fooddelivery.common.dto.ledger.LedgerTransactionCommand cmd = new com.fooddelivery.common.dto.ledger.LedgerTransactionCommand(
                 txId,
                 UUID.fromString(referenceId),
                 "wallet-service",
+                movementLeg,
                 java.util.List.of(leg)
         );
 

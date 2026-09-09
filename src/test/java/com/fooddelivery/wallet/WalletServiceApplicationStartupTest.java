@@ -64,11 +64,78 @@ class WalletServiceApplicationStartupTest {
 
     @Test
     void contextLoads() {
+        org.junit.jupiter.api.Assertions.assertNotNull(applicationContext);
+    }
+
+    /**
+     * The beans that move money must be present, not merely a context that started. This class
+     * mocks the persistence layer, so it proves the Spring wiring and nothing about the schema --
+     * {@code WalletSchemaConsistencyTest} covers that, statically, because Testcontainers are
+     * excluded by project rule and H2 cannot execute the shipped Postgres schema.
+     */
+    @Test
+    void theBeansThatMoveMoneyArePresent() {
+        for (Class<?> required : new Class<?>[]{
+                com.fooddelivery.wallet.service.WalletService.class,
+                com.fooddelivery.common.outbox.service.OutboxBacklogMetrics.class}) {
+            org.junit.jupiter.api.Assertions.assertNotNull(applicationContext.getBean(required),
+                    required.getSimpleName() + " is not in the context");
+        }
+    }
+
+    /**
+     * Every wallet endpoint the browser calls is actually mapped.
+     *
+     * <p>Nothing checked this. WalletService's endpoints were all
+     * {@code /api/v1/internal/wallets/**} behind {@code hasAnyRole('SERVICE','ADMIN')}, while four
+     * UI screens called {@code /api/v1/wallets/**} through a generated client left over from a spec
+     * that no longer existed. Every one of those call sites swallowed the failure in a catch, so
+     * the screens showed a zero balance and an empty history instead of an error.
+     *
+     * <p>The path is {@code /api/v1/money/advertiser}, not {@code /api/v1/wallets}: Phase 1 of the
+     * 2026-09-04 review deleted the latter deliberately, and the gateway's money-advertiser route
+     * already points here.
+     */
+    @Test
+    void theWalletEndpointsTheBrowserCallsAreMapped() {
+        Class<?> controller = com.fooddelivery.wallet.controller.PayeeWalletController.class;
+        String base = controller.getAnnotation(org.springframework.web.bind.annotation.RequestMapping.class).value()[0];
+
+        java.util.Set<String> mapped = new java.util.HashSet<>();
+        for (java.lang.reflect.Method m : controller.getDeclaredMethods()) {
+            org.springframework.web.bind.annotation.GetMapping get =
+                    m.getAnnotation(org.springframework.web.bind.annotation.GetMapping.class);
+            if (get != null) {
+                for (String v : get.value()) {
+                    mapped.add(base + v);
+                }
+            }
+        }
+
+        for (String required : new String[]{
+                "/api/v1/money/advertiser/{entityType}/{entityId}",
+                "/api/v1/money/advertiser/{entityType}/{entityId}/transactions",
+                "/api/v1/money/advertiser/{entityType}/{entityId}/topups/{topupId}"}) {
+            org.junit.jupiter.api.Assertions.assertTrue(mapped.contains(required),
+                    required + " is not mapped; the screen that calls it will show an empty wallet. Mapped: " + mapped);
+        }
+
+        // The bean must also be in the context, or the mapping above is just an annotation on a
+        // class Spring never instantiated.
+        org.junit.jupiter.api.Assertions.assertNotNull(applicationContext.getBean(controller));
+    }
+
+    /** Wallets are minted in the platform currency; a wrong one mints wrong wallets. */
+    @Test
+    void theConfiguredCurrencyIsINR() {
+        String currency = applicationContext.getEnvironment().getProperty("platform.default-currency", "INR");
+        org.junit.jupiter.api.Assertions.assertEquals("INR", currency);
     }
 
     @Autowired
     private ApplicationContext applicationContext;
 
     
+
 }
 
