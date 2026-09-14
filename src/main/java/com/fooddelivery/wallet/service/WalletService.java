@@ -215,16 +215,27 @@ public class WalletService {
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void publishBudgetAlert(UUID advertiserId, String campaignId, String eventId) {
-        ObjectNode payload = objectMapper.createObjectNode();
-        payload.put("advertiserId", advertiserId.toString());
-        // CampaignAlertConsumer builds its idempotency key from payload.eventId. Without this the
-        // field is absent, the consumer falls back to a random UUID, and every redelivery claims a
-        // fresh key -- i.e. budget-alert deduplication silently does nothing.
-        payload.put("eventId", eventId);
-        if (campaignId != null) {
-            payload.put("campaignId", campaignId);
-        }
+        // CampaignAlertConsumer builds its idempotency key from eventId. Without it the field is
+        // absent, the consumer falls back to a random UUID, and every redelivery claims a fresh key
+        // -- i.e. budget-alert deduplication silently does nothing. It is a component of the class
+        // now, so it cannot go missing.
+        com.fooddelivery.common.event.BudgetAlertEvent payload =
+                com.fooddelivery.common.event.BudgetAlertEvent.builder()
+                        .advertiserId(advertiserId)
+                        .eventId(eventId)
+                        .campaignId(campaignId != null ? UUID.fromString(campaignId) : null)
+                        .build();
         
+        final String payloadJson;
+        try {
+            // writeValueAsString, NOT payload.toString(). It was an ObjectNode, whose toString() IS
+            // its JSON; a Lombok @Data class's toString() is "BudgetAlertEvent(eventId=...)", which
+            // would have put a Java debug string on the wire.
+            payloadJson = objectMapper.writeValueAsString(payload);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialise BudgetAlertEvent for advertiser "
+                    + advertiserId, e);
+        }
         OutboxEventEntity event = OutboxEventEntity.builder()
                 .id(UUID.randomUUID())
                 .createdAt(java.time.LocalDateTime.now())
@@ -232,7 +243,7 @@ public class WalletService {
                 .aggregateType(AggregateType.ADVERTISEMENT)
                 .eventType(EventType.AD_BUDGET_ALERT)
                 .idempotencyKey("budget_alert:" + eventId)
-                .payload(payload.toString())
+                .payload(payloadJson)
                 .status(OutboxStatus.UNPROCESSED)
                 .build();
         outboxEventRepository.save(event);

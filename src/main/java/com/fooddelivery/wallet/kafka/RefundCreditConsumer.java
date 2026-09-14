@@ -45,36 +45,40 @@ public class RefundCreditConsumer {
     private final IIdempotencyKeyRepository idempotencyKeyRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final TransactionTemplate transactionTemplate;
+    private final com.fooddelivery.common.event.EventBinder eventBinder;
 
     public RefundCreditConsumer(WalletService walletService,
                                 ObjectMapper objectMapper,
                                 IIdempotencyKeyRepository idempotencyKeyRepository,
                                 OutboxEventRepository outboxEventRepository,
-                                TransactionTemplate transactionTemplate) {
+                                TransactionTemplate transactionTemplate,
+                                com.fooddelivery.common.event.EventBinder eventBinder) {
         this.walletService = walletService;
         this.objectMapper = objectMapper;
         this.idempotencyKeyRepository = idempotencyKeyRepository;
         this.outboxEventRepository = outboxEventRepository;
         this.transactionTemplate = transactionTemplate;
+        this.eventBinder = eventBinder;
     }
 
-    @RetryableTopic(attempts = "4", backoff = @Backoff(delay = 1000, multiplier = 2.0), autoCreateTopics = "true")
+    @RetryableTopic(attempts = "4", backoff = @Backoff(delay = 1000, multiplier = 2.0), autoCreateTopics = "true", exclude = {com.fooddelivery.common.event.EventBindingException.class}, traversingCauses = "true")
     @KafkaListener(topics = KafkaConstants.TOPIC_WALLET_EVENTS,
             groupId = "${spring.kafka.consumer.group-id}-refundcreditconsumer")
     public void consumeWalletEvent(String message,
                                    @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) throws Exception {
-        JsonNode root = objectMapper.readTree(message);
-        String eventType = com.fooddelivery.common.util.EventPayloadUtils.resolveEventType(root, headers);
-        if (!EventType.WALLET_CREDIT_REQUESTED.name().equals(eventType)) {
+        String eventType = com.fooddelivery.common.util.KafkaHeaderUtils.extractEventType(headers, null);
+        com.fooddelivery.common.event.WalletCreditRequestedEvent event = eventBinder.bindIf(
+            EventType.WALLET_CREDIT_REQUESTED, eventType, message, com.fooddelivery.common.event.WalletCreditRequestedEvent.class).orElse(null);
+        if (event == null) {
             return;
         }
         log.info("Received store-credit refund request: {}", message);
 
-        UUID refundId = UUID.fromString(root.path("refundId").asText());
-        UUID customerId = UUID.fromString(root.path("customerId").asText());
-        String orderId = root.path("orderId").asText();
-        String gatewayOrderId = root.path("gatewayOrderId").asText(null);
-        BigDecimal amount = new BigDecimal(root.path("amount").asText());
+        UUID refundId = event.refundId();
+        UUID customerId = event.customerId();
+        String orderId = event.orderId();
+        String gatewayOrderId = event.gatewayOrderId();
+        BigDecimal amount = event.amount();
 
         transactionTemplate.executeWithoutResult(status -> {
             // Atomic claim, not check-then-act: two consumers must not both credit.

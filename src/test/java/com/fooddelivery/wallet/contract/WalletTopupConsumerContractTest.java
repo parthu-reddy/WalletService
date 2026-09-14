@@ -58,6 +58,11 @@ class WalletTopupConsumerContractTest {
         public MessageVerifierSender<Message<?>> kafkaStubMessageSender(KafkaTemplate<String, String> t) {
             return new KafkaStubMessageSender(t);
         }
+
+        @Bean
+        public com.fooddelivery.common.event.EventBinder eventBinder(com.fasterxml.jackson.databind.ObjectMapper objectMapper, jakarta.validation.Validator validator) {
+            return new com.fooddelivery.common.event.EventBinder(objectMapper, validator);
+        }
     }
 
     @MockBean

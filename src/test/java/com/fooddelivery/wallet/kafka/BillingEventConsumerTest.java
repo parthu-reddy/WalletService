@@ -30,10 +30,19 @@ public class BillingEventConsumerTest {
     private ObjectMapper objectMapper;
     private BillingEventConsumer consumer;
 
+    /**
+     * A REAL binder, not a mock. It was a @Mock whose getPayloadNode() was stubbed to hand back a
+     * pre-parsed node, so the test verified the stub rather than the payload -- it could not have
+     * caught a renamed field. Binding is the thing under test now.
+     */
+    private com.fooddelivery.common.event.EventBinder eventBinder;
+
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        consumer = new BillingEventConsumer(walletService, objectMapper, idempotencyKeyRepository, transactionTemplate);
+        eventBinder = new com.fooddelivery.common.event.EventBinder(objectMapper,
+                jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator());
+        consumer = new BillingEventConsumer(walletService, objectMapper, idempotencyKeyRepository, transactionTemplate, eventBinder);
         
         lenient().doAnswer(invocation -> {
             java.util.function.Consumer<org.springframework.transaction.TransactionStatus> action = invocation.getArgument(0);
@@ -59,7 +68,11 @@ public class BillingEventConsumerTest {
         verify(walletService, times(1)).debit(
                 eq(UUID.fromString(advertiserId)),
                 eq(WalletEntityType.ADVERTISER),
-                eq(new BigDecimal("10.5")),
+                // 10.50, not 10.5. The wire says "amount":10.50 and BillingEvent.amount is a
+                // BigDecimal, so the scale now survives binding. The old path went
+                // JsonNode -> convertValue -> Double -> String.valueOf -> BigDecimal, which
+                // dropped it to 10.5 -- the exact Double round-trip JacksonConfig warns about.
+                eq(new BigDecimal("10.50")),
                 eq(eventId),
                 eq("AD_IMPRESSION"),
                 eq(com.fooddelivery.common.enums.ChargeCategory.AD_IMPRESSION)
@@ -73,7 +86,7 @@ public class BillingEventConsumerTest {
         verify(walletService, times(1)).debit(
                 eq(UUID.fromString(advertiserId)),
                 eq(WalletEntityType.ADVERTISER),
-                eq(new BigDecimal("10.5")),
+                eq(new BigDecimal("10.50")),   // the wire scale, as above
                 eq(eventId),
                 eq("AD_IMPRESSION"),
                 eq(com.fooddelivery.common.enums.ChargeCategory.AD_IMPRESSION)

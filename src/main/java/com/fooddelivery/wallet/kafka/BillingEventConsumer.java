@@ -28,23 +28,21 @@ public class BillingEventConsumer {
     private final ObjectMapper objectMapper;
     private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
-    @RetryableTopic(attempts = "4", backoff = @Backoff(delay = 1000, multiplier = 2.0), exclude = {InsufficientFundsException.class})
+    @RetryableTopic(attempts = "4", backoff = @Backoff(delay = 1000, multiplier = 2.0), exclude = {com.fooddelivery.common.event.EventBindingException.class, InsufficientFundsException.class}, traversingCauses = "true")
     @KafkaListener(topics = KafkaConstants.TOPIC_AD_BILLING_EVENTS, groupId = "${spring.kafka.consumer.group-id}-billing-billingeventconsumer")
     public void consumeAdBillingEvent(String message) throws Exception {
         log.info("Received ad billing event: {}", message);
-        Map<String, Object> event = objectMapper.readValue(message, new TypeReference<Map<String, Object>>() {
-        });
-        String eventId = (String) event.get("eventId");
-        String advIdStr = (String) event.get("advertiserId");
-        String campaignId = (String) event.get("campaignId");
-        if (advIdStr == null || eventId == null) {
-            log.error("Missing required fields in billing event: {}", message);
-            return;
-        }
-        UUID advertiserId = UUID.fromString(advIdStr);
-        String amtStr = String.valueOf(event.get("amount"));
-        BigDecimal amount = new BigDecimal(amtStr);
-        String category = (String) event.get("chargeCategory");
+        // eventId, advertiserId, campaignId, chargeCategory and amount are all @NotNull on
+        // BillingEvent, and ad_billing_events.groovy pins every one of them -- so a missing field is
+        // a producer defect. It now reaches the DLT instead of being logged and dropped, which on a
+        // money path is the difference between a visible failure and a silent one.
+        com.fooddelivery.common.event.BillingEvent event =
+                eventBinder.bind(message, com.fooddelivery.common.event.BillingEvent.class);
+        String eventId = event.getEventId();
+        String campaignId = event.getCampaignId();
+        UUID advertiserId = UUID.fromString(event.getAdvertiserId());
+        BigDecimal amount = event.getAmount();
+        String category = event.getChargeCategory();
         
         com.fooddelivery.common.enums.ChargeCategory chargeCategoryEnum = com.fooddelivery.common.enums.ChargeCategory.AD_IMPRESSION;
         if (category != null) {
@@ -87,7 +85,10 @@ public class BillingEventConsumer {
 
     private final com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository;
 
-    public BillingEventConsumer(WalletService walletService, ObjectMapper objectMapper, com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository, org.springframework.transaction.support.TransactionTemplate transactionTemplate) {
+        private final com.fooddelivery.common.event.EventBinder eventBinder;
+
+public BillingEventConsumer(WalletService walletService, ObjectMapper objectMapper, com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository, org.springframework.transaction.support.TransactionTemplate transactionTemplate, com.fooddelivery.common.event.EventBinder eventBinder) {
+        this.eventBinder = eventBinder;
         this.walletService = walletService;
         this.objectMapper = objectMapper;
         this.idempotencyKeyRepository = idempotencyKeyRepository;
