@@ -31,9 +31,7 @@ public class BillingEventConsumerTest {
     private BillingEventConsumer consumer;
 
     /**
-     * A REAL binder, not a mock. It was a @Mock whose getPayloadNode() was stubbed to hand back a
-     * pre-parsed node, so the test verified the stub rather than the payload -- it could not have
-     * caught a renamed field. Binding is the thing under test now.
+     * A REAL binder, not a mock. Binding is the thing under test now.
      */
     private com.fooddelivery.common.event.EventBinder eventBinder;
 
