@@ -31,11 +31,18 @@ public class WalletTopupService {
         java.util.Optional<WalletTopup> existingOpt = topupRepository.findByGatewayOrderId(internalOrderId);
         if (existingOpt.isPresent()) {
             // Idempotent return - do not recreate the order on payment gateway
-            return new TopupCreated(existingOpt.get().getId(), internalOrderId);
+            WalletTopup existing = existingOpt.get();
+            return new TopupCreated(existing.getId(), existing.getProviderGatewayOrderId());
         }
         
         BigDecimal amountInInr = request.getAmount();
-        String gateway = request.getGatewayName() != null && !request.getGatewayName().isBlank() ? request.getGatewayName() : "RAZORPAY";
+        if (request.getPaymentMethod() == null || request.getPaymentMethod() == com.fooddelivery.common.enums.PaymentMethod.WALLET) {
+            throw new IllegalArgumentException("Wallet top-ups require CARD or UPI");
+        }
+
+        CreateOrderRequest paymentReq = new CreateOrderRequest(internalOrderId, amountInInr)
+                .paymentMethod(request.getPaymentMethod());
+        com.fooddelivery.common.dto.payment.CreatePaymentResponse payment = paymentClient.createOrder(paymentReq);
         
         WalletTopup topup = new WalletTopup();
         // Assigned here, not left to the provider: the caller is handed this id to poll with, and
@@ -44,12 +51,15 @@ public class WalletTopupService {
         topup.setAdvertiserId(advertiserId);
         topup.setAmount(amountInInr);
         topup.setGatewayOrderId(internalOrderId);
-        topup.setGatewayName(gateway);
+        topup.setProviderGatewayOrderId(payment.gatewayOrderId());
+        topup.setGatewayName(payment.gateway().name());
+        topup.setIdempotencyKey(idempotencyKey);
         topup.setStatus(TopupStatus.PENDING);
         topupRepository.save(topup);
 
-        CreateOrderRequest paymentReq = new CreateOrderRequest(internalOrderId, amountInInr);
-        return new TopupCreated(topup.getId(), paymentClient.createOrder(gateway, paymentReq));
+        log.info("WALLET_TOPUP_PAYMENT_INTENT_CREATED topupId={} advertiserId={} paymentMethod={} gateway={} gatewayOrderId={}",
+                topup.getId(), advertiserId, request.getPaymentMethod(), payment.gateway(), payment.gatewayOrderId());
+        return new TopupCreated(topup.getId(), payment.gatewayOrderId());
     }
 
     /**

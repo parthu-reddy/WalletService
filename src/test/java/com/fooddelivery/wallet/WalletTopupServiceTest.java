@@ -40,15 +40,16 @@ public class WalletTopupServiceTest {
 
         WalletTopup existing = new WalletTopup();
         existing.setId(java.util.UUID.randomUUID());
+        existing.setProviderGatewayOrderId("GATEWAY_INTENT_ID");
         when(topupRepository.findByGatewayOrderId(internalOrderId)).thenReturn(Optional.of(existing));
 
         WalletTopupService.TopupCreated result = walletTopupService.createTopup(advertiserId, request, idempotencyKey);
 
-        assertEquals(internalOrderId, result.gatewayOrderId());
+        assertEquals("GATEWAY_INTENT_ID", result.gatewayOrderId());
         // The caller polls by top-up id; a retry must name the same row, not mint a new one.
         assertEquals(existing.getId(), result.topupId());
         verify(topupRepository, never()).save(any());
-        verify(paymentClient, never()).createOrder(anyString(), any());
+        verify(paymentClient, never()).createOrder(any());
     }
 
     @Test
@@ -56,18 +57,21 @@ public class WalletTopupServiceTest {
         UUID advertiserId = UUID.randomUUID();
         TopupWalletRequest request = new TopupWalletRequest();
         request.setAmount(new BigDecimal("200.00"));
-        request.setGatewayName("RAZORPAY");
+        request.setPaymentMethod(com.fooddelivery.common.enums.PaymentMethod.CARD);
         String idempotencyKey = "test_key";
         String internalOrderId = "WALLET_" + advertiserId.toString() + "_" + idempotencyKey;
 
         when(topupRepository.findByGatewayOrderId(internalOrderId)).thenReturn(Optional.empty());
-        when(paymentClient.createOrder(eq("RAZORPAY"), any(CreateOrderRequest.class))).thenReturn("GATEWAY_INTENT_ID");
+        when(paymentClient.createOrder(any(CreateOrderRequest.class))).thenReturn(
+                new com.fooddelivery.common.dto.payment.CreatePaymentResponse(
+                        "GATEWAY_INTENT_ID", com.fooddelivery.common.enums.PaymentGateway.RAZORPAY));
 
         WalletTopupService.TopupCreated result = walletTopupService.createTopup(advertiserId, request, idempotencyKey);
 
         assertEquals("GATEWAY_INTENT_ID", result.gatewayOrderId());
         assertNotNull(result.topupId(), "the caller cannot poll a top-up whose id it was not given");
         verify(topupRepository, times(1)).save(any(WalletTopup.class));
-        verify(paymentClient, times(1)).createOrder(eq("RAZORPAY"), any(CreateOrderRequest.class));
+        verify(paymentClient, times(1)).createOrder(argThat(paymentRequest ->
+                paymentRequest.getPaymentMethod() == com.fooddelivery.common.enums.PaymentMethod.CARD));
     }
 }

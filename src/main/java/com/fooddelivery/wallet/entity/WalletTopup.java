@@ -26,6 +26,9 @@ public class WalletTopup {
     @Column(name = "gateway_order_id", nullable = false)
     private String gatewayOrderId;
 
+    @Column(name = "provider_gateway_order_id")
+    private String providerGatewayOrderId;
+
     @Column(name = "gateway_name", nullable = false)
     private String gatewayName;
 
