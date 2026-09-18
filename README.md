@@ -109,3 +109,4 @@ How this service integrates with the broader Food Delivery platform:
   - Ex: `DEBIT: ADVERTISER_WALLET → CREDIT: PLATFORM (AD_REVENUE)` for impressions/clicks.
 - **PaymentService (Wallet Top-Up)**: Calls `PaymentService` to create a payment intent. Upon successful payment webhook, it credits the `ADVERTISER_WALLET` and publishes a ledger transaction.
 - **CommonLibrary**: Relies on shared constants (`TOPIC_AD_BILLING_EVENTS`), `AccountType.ADVERTISER_WALLET(50)`, and `ChargeCategory` (e.g., `AD_IMPRESSION(120)`, `AD_CLICK(130)`).
+
