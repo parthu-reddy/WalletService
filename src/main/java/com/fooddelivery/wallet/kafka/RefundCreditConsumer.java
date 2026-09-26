@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -67,11 +67,22 @@ public class RefundCreditConsumer {
     public void consumeWalletEvent(String message,
                                    @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) throws Exception {
         String eventType = com.fooddelivery.common.util.KafkaHeaderUtils.extractEventType(headers, null);
-        com.fooddelivery.common.event.WalletCreditRequestedEvent event = eventBinder.bindIf(
-            EventType.WALLET_CREDIT_REQUESTED, eventType, message, com.fooddelivery.common.event.WalletCreditRequestedEvent.class).orElse(null);
-        if (event == null) {
+        // Without the header this cannot be told apart from another event type, so it is dropped --
+        // but loudly, with the body, because it may be a customer's refund credit. The admin DLQ retry
+        // used to republish without one; it now replays the DLT record's own headers (DeadLetterReplayer).
+        if (eventType == null) {
+            log.warn("Missing eventType header on wallet-events. Ignoring message: {}", message);
             return;
         }
+        if (!EventType.WALLET_CREDIT_REQUESTED.name().equals(eventType)) {
+            return;
+        }
+        com.fooddelivery.common.event.WalletCreditRequestedEvent event = eventBinder.bindIf(
+                EventType.WALLET_CREDIT_REQUESTED, eventType, message,
+                com.fooddelivery.common.event.WalletCreditRequestedEvent.class).orElseThrow(
+                        () -> new IllegalStateException(
+                                "bindIf returned empty for " + eventType
+                                        + " despite an exact event-type match"));
         log.info("Received store-credit refund request: {}", message);
 
         UUID refundId = event.refundId();
@@ -111,7 +122,7 @@ public class RefundCreditConsumer {
                     .eventType(EventType.PAYMENT_REFUNDED)
                     .idempotencyKey("refund_credited:" + refundId)
                     .payload(objectMapper.writeValueAsString(payload))
-                    .createdAt(LocalDateTime.now())
+                    .createdAt(Instant.now())
                     .status(OutboxStatus.UNPROCESSED)
                     .build();
             outboxEventRepository.save(event);
@@ -126,6 +137,7 @@ public class RefundCreditConsumer {
     @DltHandler
     public void handleDlt(String message,
                           @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
-        log.error("DLT: store-credit refund could not be applied after retries. Message: {}", message);
+        log.error("DLT: store-credit refund could not be applied after retries. Message: {} replay={}", message,
+                com.fooddelivery.common.util.KafkaHeaderUtils.deadLetterPosition(headers));
     }
 }

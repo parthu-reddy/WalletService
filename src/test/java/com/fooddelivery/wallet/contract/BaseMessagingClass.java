@@ -60,7 +60,7 @@ public abstract class BaseMessagingClass {
                         .aggregateId(advertiserId.toString())
                         .eventType(com.fooddelivery.common.constants.EventType.AD_BUDGET_ALERT)
                         .payload(payload.toString())
-                        .createdAt(java.time.LocalDateTime.now())
+                        .createdAt(java.time.Instant.now())
                         .build();
 
         com.fooddelivery.common.outbox.repository.OutboxEventRepository repo =
@@ -106,7 +106,7 @@ public abstract class BaseMessagingClass {
                         .aggregateId(transactionId.toString())
                         .eventType(com.fooddelivery.common.constants.EventType.LEDGER_TRANSACTION_REQUEST)
                         .payload(objectMapper.writeValueAsString(command))
-                        .createdAt(java.time.LocalDateTime.now())
+                        .createdAt(java.time.Instant.now())
                         .build();
 
         com.fooddelivery.common.outbox.repository.OutboxEventRepository repo =

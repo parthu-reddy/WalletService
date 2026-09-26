@@ -78,8 +78,9 @@ public class BillingEventConsumer {
 
 
     @DltHandler
-    public void handleDltBillingEvent(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("DLQ: Failed to process billing event on topic {} after retries: {}", topic, message);
+    public void handleDltBillingEvent(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
+                          @Header(KafkaHeaders.OFFSET) long offset) {
+        log.error("DLQ: Failed to process billing event on topic {} after retries: {} replay={}", topic, message, com.fooddelivery.common.util.KafkaHeaderUtils.deadLetterPosition(topic, partition, offset));
         // Persist DLQ message for manual intervention or alert monitoring systems
     }
 

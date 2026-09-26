@@ -197,7 +197,7 @@ public class WalletService {
 
         OutboxEventEntity event = OutboxEventEntity.builder()
                 .id(UUID.randomUUID())
-                .createdAt(java.time.LocalDateTime.now())
+                .createdAt(java.time.Instant.now())
                 .aggregateId(txId.toString())
                 .aggregateType(AggregateType.LEDGER)
                 .eventType(EventType.LEDGER_TRANSACTION_REQUEST)
@@ -238,7 +238,7 @@ public class WalletService {
         }
         OutboxEventEntity event = OutboxEventEntity.builder()
                 .id(UUID.randomUUID())
-                .createdAt(java.time.LocalDateTime.now())
+                .createdAt(java.time.Instant.now())
                 .aggregateId(advertiserId.toString())
                 .aggregateType(AggregateType.ADVERTISEMENT)
                 .eventType(EventType.AD_BUDGET_ALERT)

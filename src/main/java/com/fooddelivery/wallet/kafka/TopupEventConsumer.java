@@ -103,6 +103,7 @@ public class TopupEventConsumer {
 
     @org.springframework.kafka.annotation.DltHandler
     public void handleDltMessage(String message, @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
-        log.error("Dead Letter Topic: Failed to process wallet topup event after retries. Message: {}", message);
+        log.error("Dead Letter Topic: Failed to process wallet topup event after retries. Message: {} replay={}", message,
+                com.fooddelivery.common.util.KafkaHeaderUtils.deadLetterPosition(headers));
     }
 }

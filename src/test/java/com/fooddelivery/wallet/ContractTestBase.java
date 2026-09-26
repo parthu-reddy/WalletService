@@ -52,6 +52,7 @@ public abstract class ContractTestBase {
         };
 
         InternalWalletController walletController = new InternalWalletController(walletService);
-        RestAssuredMockMvc.standaloneSetup(walletController);
+        // Serialize as production does: see PlatformJson (contract-harness Jackson drift).
+        com.fooddelivery.common.contract.PlatformJson.standaloneSetup(walletController);
     }
 }
