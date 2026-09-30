@@ -47,6 +47,11 @@ class WalletServiceApplicationStartupTest {
     private com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository;
     @org.springframework.boot.test.mock.mockito.MockBean
     private com.fooddelivery.common.outbox.repository.OutboxEventRepository outboxEventRepository;
+    // This wiring test deliberately replaces JPA with mocks. Keep the wallet-specific guarded
+    // outbox repository mocked alongside the shared repository; its real query is exercised by
+    // OutboxDlqRetryRepositoryPersistenceTest.
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.wallet.repository.OutboxDlqRetryRepository outboxDlqRetryRepository;
     @org.springframework.boot.test.mock.mockito.MockBean
     private com.fooddelivery.common.security.SecurityContextFilter securityContextFilter;
 
@@ -138,4 +143,3 @@ class WalletServiceApplicationStartupTest {
     
 
 }
-

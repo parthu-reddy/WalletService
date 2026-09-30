@@ -7,6 +7,7 @@ import com.fooddelivery.common.messaging.DeadLetterReplayResult;
 import com.fooddelivery.common.messaging.DeadLetterReplayer;
 import com.fooddelivery.common.outbox.entity.OutboxEventEntity;
 import com.fooddelivery.common.outbox.repository.OutboxEventRepository;
+import com.fooddelivery.wallet.repository.OutboxDlqRetryRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.ConsumerFactory;
@@ -21,11 +22,14 @@ public class AdminDlqController {
 
     private final DeadLetterReplayer deadLetterReplayer;
     private final OutboxEventRepository outboxEventRepository;
+    private final OutboxDlqRetryRepository outboxDlqRetryRepository;
 
     public AdminDlqController(ConsumerFactory<String, String> consumerFactory, KafkaTemplate<String, String> kafkaTemplate,
-                              OutboxEventRepository outboxEventRepository) {
+                              OutboxEventRepository outboxEventRepository,
+                              OutboxDlqRetryRepository outboxDlqRetryRepository) {
         this.deadLetterReplayer = new DeadLetterReplayer(consumerFactory, kafkaTemplate);
         this.outboxEventRepository = outboxEventRepository;
+        this.outboxDlqRetryRepository = outboxDlqRetryRepository;
     }
 
     /**
@@ -68,20 +72,21 @@ public class AdminDlqController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> retryOutboxDlqEvent(@PathVariable java.util.UUID eventId) {
         try {
+            int transitioned = outboxDlqRetryRepository.transitionDlqToUnprocessed(
+                    eventId, OutboxStatus.DLQ, OutboxStatus.UNPROCESSED);
+            if (transitioned == 1) {
+                log.info("Admin manually retried outbox DLQ event: {}", eventId);
+                return ResponseEntity.ok(ApiResponse.success("Outbox event queued for retry",
+                        "Successfully reset to UNPROCESSED"));
+            }
+
+            // The guarded update lost because the row either no longer exists or another actor (or
+            // the processor after a successful retry) advanced it. Read only after the failed
+            // compare-and-set so this request can never write a stale entity back to the database.
             OutboxEventEntity event = outboxEventRepository.findById(eventId)
                     .orElseThrow(() -> new IllegalArgumentException("Outbox event not found: " + eventId));
-            
-            if (event.getStatus() != OutboxStatus.DLQ) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Event can only be retried if status is DLQ. Current status: " + event.getStatus()));
-            }
-            
-            log.info("Admin manually retrying outbox DLQ event: {}", eventId);
-            
-            event.setStatus(OutboxStatus.UNPROCESSED);
-            event.setRetryCount(0);
-            outboxEventRepository.save(event);
-            
-            return ResponseEntity.ok(ApiResponse.success("Outbox event queued for retry", "Successfully reset to UNPROCESSED"));
+            return ResponseEntity.badRequest().body(ApiResponse.error(
+                    "Event can only be retried if status is DLQ. Current status: " + event.getStatus()));
         } catch (Exception e) {
             log.error("Failed to retry outbox DLQ event", e);
             return ResponseEntity.badRequest().body(ApiResponse.error("Failed to retry outbox event: " + e.getMessage()));

@@ -5,9 +5,12 @@ import com.fooddelivery.common.dto.ApiResponse;
 import com.fooddelivery.common.enums.ChargeCategory;
 import com.fooddelivery.common.enums.WalletEntityType;
 import com.fooddelivery.common.event.EventBinder;
+import com.fooddelivery.common.enums.OutboxStatus;
 import com.fooddelivery.common.messaging.DeadLetterReplayRequest;
 import com.fooddelivery.common.messaging.DeadLetterReplayResult;
+import com.fooddelivery.common.outbox.entity.OutboxEventEntity;
 import com.fooddelivery.common.outbox.repository.OutboxEventRepository;
+import com.fooddelivery.wallet.repository.OutboxDlqRetryRepository;
 import com.fooddelivery.common.repository.IIdempotencyKeyRepository;
 import com.fooddelivery.wallet.kafka.RefundCreditConsumer;
 import com.fooddelivery.wallet.service.WalletService;
@@ -27,6 +30,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
@@ -59,6 +63,7 @@ class WalletDlqReplayTest {
     @Mock private WalletService walletService;
     @Mock private IIdempotencyKeyRepository idempotencyKeyRepository;
     @Mock private OutboxEventRepository outboxEventRepository;
+    @Mock private OutboxDlqRetryRepository outboxDlqRetryRepository;
     @Mock private TransactionTemplate transactionTemplate;
     @Mock private ConsumerFactory<String, String> consumerFactory;
 
@@ -81,7 +86,8 @@ class WalletDlqReplayTest {
 
     @BeforeEach
     void setUp() {
-        controller = new AdminDlqController(consumerFactory, new KafkaTemplate<>(() -> producer), outboxEventRepository);
+        controller = new AdminDlqController(consumerFactory, new KafkaTemplate<>(() -> producer), outboxEventRepository,
+                outboxDlqRetryRepository);
         consumer = new RefundCreditConsumer(walletService, objectMapper, idempotencyKeyRepository, outboxEventRepository,
                 transactionTemplate, new EventBinder(objectMapper,
                         jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator()));
@@ -160,5 +166,37 @@ class WalletDlqReplayTest {
 
         assertThat(producer.history()).hasSize(2);
         verify(walletService, times(1)).credit(any(), any(), any(), anyString(), anyString(), any());
+    }
+
+    /**
+     * A delayed retry must not write a stale entity after the first retry has been processed. The
+     * only state transition is the guarded database update; the second request sees PROCESSED and
+     * receives a controlled non-success response.
+     */
+    @Test
+    void retryingTheSameOutboxDlqEventTwiceCannotRequeueAProcessedEvent() {
+        UUID eventId = UUID.randomUUID();
+        when(outboxDlqRetryRepository.transitionDlqToUnprocessed(eventId, OutboxStatus.DLQ,
+                OutboxStatus.UNPROCESSED)).thenReturn(1, 0);
+        OutboxEventEntity processed = OutboxEventEntity.builder()
+                .id(eventId)
+                .status(OutboxStatus.PROCESSED)
+                .retryCount(0)
+                .build();
+        when(outboxEventRepository.findById(eventId)).thenReturn(Optional.of(processed));
+
+        var first = controller.retryOutboxDlqEvent(eventId);
+        var delayedSecond = controller.retryOutboxDlqEvent(eventId);
+
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(first.getBody()).isNotNull();
+        assertThat(first.getBody().isSuccess()).isTrue();
+        assertThat(delayedSecond.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(delayedSecond.getBody()).isNotNull();
+        assertThat(delayedSecond.getBody().isSuccess()).isFalse();
+        assertThat(delayedSecond.getBody().getMessage()).contains("Current status: PROCESSED");
+        verify(outboxDlqRetryRepository, times(2)).transitionDlqToUnprocessed(eventId, OutboxStatus.DLQ,
+                OutboxStatus.UNPROCESSED);
+        verify(outboxEventRepository, never()).save(any());
     }
 }
