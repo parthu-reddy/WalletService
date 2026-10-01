@@ -32,6 +32,17 @@ import org.springframework.context.annotation.Import;
 })
 class InternalWalletControllerAuthorizationTest {
 
+    // @WithMockUser supplies the caller for these controller tests. Keep all role/owner
+    // authorization enabled; replace only the separate signature-verification boundary.
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.common.security.SecurityContextFilter identityHeaderFilter;
+
+    @org.junit.jupiter.api.BeforeEach
+    void configureMockIdentityFilter() throws Exception {
+        com.fooddelivery.common.test.MockIdentityFilterSupport.passThrough(identityHeaderFilter);
+    }
+
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -145,4 +156,12 @@ class InternalWalletControllerAuthorizationTest {
         mockMvc.perform(get("/api/v1/internal/wallets/CUSTOMER/" + entityId))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void anonymousCallerCannotReadWallet() throws Exception {
+        mockMvc.perform(get("/api/v1/internal/wallets/CUSTOMER/" + entityId))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verifyNoInteractions(walletService);
+    }
+
 }
