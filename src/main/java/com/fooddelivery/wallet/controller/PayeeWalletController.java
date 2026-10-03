@@ -51,6 +51,8 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/v1/money/advertiser")
+// Advertisers are restaurant owners: RoleName has no ADVERTISER role and the gateway admits only the
+// restaurant role here. Which advertiser a caller may read is MoneyAccessPolicy's decision.
 @RequiredArgsConstructor
 public class PayeeWalletController {
 
@@ -75,7 +77,7 @@ public class PayeeWalletController {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ADVERTISER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('RESTAURANT', 'ADMIN')")
     @GetMapping("/{entityType}/{entityId}")
     public ResponseEntity<WalletDto> getWallet(@PathVariable WalletEntityType entityType,
                                                @PathVariable UUID entityId) {
@@ -83,7 +85,7 @@ public class PayeeWalletController {
         return ResponseEntity.ok(toDto(walletService.getWallet(entityId, entityType)));
     }
 
-    @PreAuthorize("hasAnyRole('ADVERTISER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('RESTAURANT', 'ADMIN')")
     @GetMapping("/{entityType}/{entityId}/transactions")
     public ResponseEntity<PageResponseDto<WalletTransactionDto>> getTransactions(
             @PathVariable WalletEntityType entityType,
@@ -103,7 +105,7 @@ public class PayeeWalletController {
      * so the poll 404'd until the retry budget ran out and the balance only ever refreshed when the
      * user reloaded the page.
      */
-    @PreAuthorize("hasAnyRole('ADVERTISER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('RESTAURANT', 'ADMIN')")
     @GetMapping("/{entityType}/{entityId}/topups/{topupId}")
     public ResponseEntity<Map<String, Object>> getTopupStatus(@PathVariable WalletEntityType entityType,
                                                               @PathVariable UUID entityId,
