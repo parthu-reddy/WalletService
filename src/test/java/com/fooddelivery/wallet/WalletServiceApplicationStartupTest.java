@@ -11,6 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
     webEnvironment = SpringBootTest.WebEnvironment.NONE, 
     properties = {
         "spring.cloud.config.enabled=false",
+        "spring.cloud.openfeign.client.config.campaign-service.url=http://campaign-test",
+        "spring.cloud.openfeign.client.config.restaurant-service.url=http://restaurant-test",
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration,org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration,org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration,org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration,org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration",
@@ -142,4 +144,42 @@ class WalletServiceApplicationStartupTest {
 
     
 
+
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private feign.Client ownershipTransport;
+
+    /** Uses the real application context and Feign transport, never a mocked ownership client. */
+    @Test
+    void moneyOwnershipLookupsReachTheOwningServices() throws Exception {
+        var user = java.util.UUID.randomUUID();
+        var outlet = java.util.UUID.randomUUID();
+        var advertiser = java.util.UUID.randomUUID();
+        org.mockito.Mockito.when(ownershipTransport.execute(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> {
+                    feign.Request request = invocation.getArgument(0);
+                    org.junit.jupiter.api.Assertions.assertEquals(java.util.List.of("SERVICE"),
+                            java.util.List.copyOf(request.headers().get("X-User-Roles")));
+                    String response = request.url().contains("/advertisers/")
+                            ? "{\"userId\":\"" + user + "\"}"
+                            : "[\"" + outlet + "\"]";
+                    return feign.Response.builder().status(200).reason("OK").request(request)
+                            .headers(java.util.Map.of("Content-Type", java.util.List.of("application/json")))
+                            .body(response, java.nio.charset.StandardCharsets.UTF_8).build();
+                });
+        var policy = applicationContext.getBean(com.fooddelivery.common.security.money.MoneyAccessPolicy.class);
+        var owner = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                user.toString(), null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_RESTAURANT")));
+        org.junit.jupiter.api.Assertions.assertTrue(policy.canAccessMoney(owner,
+                com.fooddelivery.common.security.money.MoneyOwnerType.ADVERTISER, advertiser));
+        org.junit.jupiter.api.Assertions.assertTrue(policy.canAccessMoney(owner,
+                com.fooddelivery.common.security.money.MoneyOwnerType.RESTAURANT, outlet));
+        var outsider = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                java.util.UUID.randomUUID().toString(), null, owner.getAuthorities());
+        org.junit.jupiter.api.Assertions.assertFalse(policy.canAccessMoney(outsider,
+                com.fooddelivery.common.security.money.MoneyOwnerType.ADVERTISER, advertiser));
+        org.junit.jupiter.api.Assertions.assertFalse(policy.canAccessMoney(owner,
+                com.fooddelivery.common.security.money.MoneyOwnerType.RESTAURANT, java.util.UUID.randomUUID()));
+        org.mockito.Mockito.verify(ownershipTransport, org.mockito.Mockito.times(2))
+                .execute(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
 }

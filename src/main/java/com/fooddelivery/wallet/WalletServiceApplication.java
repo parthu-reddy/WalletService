@@ -12,6 +12,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication(
     scanBasePackages = {"com.fooddelivery.wallet", "com.fooddelivery.common"}
 )
+@org.springframework.cloud.openfeign.EnableFeignClients(clients = {
+    com.fooddelivery.common.client.RestaurantServiceClient.class,
+    com.fooddelivery.common.client.CampaignServiceClient.class
+})
 @EnableDiscoveryClient
 @EnableScheduling
 public class WalletServiceApplication {
